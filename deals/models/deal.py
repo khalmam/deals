@@ -12,6 +12,7 @@ class Deal(models.Model):
     state = models.CharField(max_length=20, default=State.DRAFT.value,
                              choices=[(s.value, s.value) for s in State])
     terms = models.JSONField(default=dict)
+    mandate = models.JSONField(default=dict, blank=True)
     terms_hash = models.CharField(max_length=64, blank=True)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     currency = models.CharField(max_length=3, default="USD")

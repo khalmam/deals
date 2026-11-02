@@ -38,7 +38,7 @@ class PayoutItem:
 class PayoutResult:
     batch_id: str
     status: str
-    items: tuple = ()  # ((payout_item_id, transaction_status), ...)
+    items: tuple = ()  # ((payout_item_id, transaction_status, sender_item_id), ...)
 
 
 @dataclass(frozen=True)

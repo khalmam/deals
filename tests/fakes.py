@@ -5,6 +5,8 @@ from deals.domain.ports import Authorization, Capture, HoldRequest, PayoutResult
 class FakePayments:
     def __init__(self, tamper_custom_id=False):
         self.calls = []
+        self.payouts = []
+        self.payout_status = "SUCCESS"
         self.tamper = tamper_custom_id
         self._hold = None
 
@@ -33,7 +35,11 @@ class FakePayments:
         return "REF-1"
 
     def send_payout(self, batch_key, items):
+        self.calls.append(("send_payout", batch_key))
+        self.payouts.append(list(items))
         return PayoutResult("BATCH-1", "PENDING")
 
     def get_payout(self, batch_id):
-        return PayoutResult(batch_id, "SUCCESS")
+        items = tuple((f"PI-{i.item_key}", self.payout_status, i.item_key)
+                      for batch in self.payouts for i in batch)
+        return PayoutResult(batch_id, "SUCCESS", items)

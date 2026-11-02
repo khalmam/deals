@@ -71,5 +71,7 @@ class PayPalPayments:
 
     def get_payout(self, batch_id):
         d = self._c.request("GET", f"/v1/payments/payouts/{batch_id}")
-        items = tuple((i["payout_item_id"], i["transaction_status"]) for i in d.get("items", []))
+        items = tuple((i["payout_item_id"], i["transaction_status"],
+                       (i.get("payout_item") or {}).get("sender_item_id", ""))
+                      for i in d.get("items", []))
         return PayoutResult(batch_id, d["batch_header"]["batch_status"], items)

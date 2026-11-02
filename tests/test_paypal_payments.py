@@ -70,8 +70,9 @@ def test_payout_items_use_currency_field():
 
 def test_get_payout_returns_item_statuses():
     log = []
+    item = {"payout_item_id": "I1", "transaction_status": "SUCCESS",
+            "payout_item": {"sender_item_id": "k1"}}
     p = adapter({"/v1/payments/payouts/B1": {"batch_header": {"batch_status": "SUCCESS"},
-                                              "items": [{"payout_item_id": "I1",
-                                                         "transaction_status": "SUCCESS"}]}}, log)
+                                              "items": [item]}}, log)
     r = p.get_payout("B1")
-    assert r.status == "SUCCESS" and r.items == (("I1", "SUCCESS"),)
+    assert r.status == "SUCCESS" and r.items == (("I1", "SUCCESS", "k1"),)
