@@ -18,21 +18,31 @@ class Mandate:
     allow_payouts: bool = False
     approved_subs: dict = field(default_factory=dict)  # sub_id -> PayPal email
     max_payout_pct: Decimal = Decimal("60")  # cap on sub-contractor share of the total
+    allow_hold: bool = False
+    allow_capture: bool = False
+    allow_void: bool = False
 
     def __post_init__(self):
         for sub_id, email in self.approved_subs.items():
             if not EMAIL.match(str(email)):
                 raise MandateViolation(f"{sub_id}: {email!r} is not an email address")
 
+    def flags(self):
+        """The yes/no permissions the agent's tool menu is built from."""
+        return {"allow_hold": self.allow_hold, "allow_capture": self.allow_capture,
+                "allow_void": self.allow_void, "allow_payouts": self.allow_payouts}
+
     def to_dict(self):
-        return {"allow_payouts": self.allow_payouts, "approved_subs": dict(self.approved_subs),
+        return {**self.flags(), "approved_subs": dict(self.approved_subs),
                 "max_payout_pct": str(self.max_payout_pct)}
 
     @classmethod
     def from_dict(cls, d):
         d = d or {}
         return cls(bool(d.get("allow_payouts", False)), dict(d.get("approved_subs", {})),
-                   Decimal(str(d.get("max_payout_pct", "60"))))
+                   Decimal(str(d.get("max_payout_pct", "60"))),
+                   bool(d.get("allow_hold", False)), bool(d.get("allow_capture", False)),
+                   bool(d.get("allow_void", False)))
 
 
 def check_payouts(mandate, payouts, total):

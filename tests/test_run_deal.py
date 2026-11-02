@@ -17,7 +17,7 @@ def test_run_deal_goes_from_brief_to_paid_out(monkeypatch):
     call_command("run_deal", "--sub-email", "ill@x.com", stdout=out)
     text = out.getvalue()
     assert "negotiation: AGREED at 1620.00 USD" in text and "state: PAID_OUT" in text
-    assert "ledger: intact" in text
+    assert "ledger: intact" in text and text.count("AGENT_ACTION") == 3
     assert pay.payouts[0][0].receiver_email == "ill@x.com"
     assert str(pay.payouts[0][0].amount) == "225.00 USD"
 

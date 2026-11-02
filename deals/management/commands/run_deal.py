@@ -6,6 +6,7 @@ import time
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
+from agents.actor import ActionAgent
 from agents.client_sim import Persona, ScriptedClient
 from agents.freelancer import FreelancerAgent
 from agents.llm import ClaudeLLM, NoModel
@@ -13,15 +14,14 @@ from agents.spend_guard import MemoryStore, SpendGuard
 from deals.domain.mandate import Mandate
 from deals.domain.money import Money
 from deals.management.paypal_factory import payments_from_settings
+from deals.services.agent_run import agent_run
 from deals.services.confirm_hold import confirm_hold
-from deals.services.delivery_capture_void import capture, confirm_delivery
+from deals.services.delivery_capture_void import confirm_delivery
 from deals.services.ledger import verify_ledger
 from deals.services.mandate import set_mandate
 from deals.services.negotiate import negotiate
 from deals.services.open_deal import open_deal
-from deals.services.open_hold import open_hold
 from deals.services.refresh_payouts import refresh_payouts
-from deals.services.send_payouts import send_payouts
 from engine.demo_card import demo_card
 
 
@@ -36,26 +36,27 @@ class Command(BaseCommand):
         parser.add_argument("--wait", type=int, default=12, help="payout checks, 5 seconds apart")
 
     def handle(self, *args, **opts):
-        mandate = Mandate(True, {"illustrator": opts["sub_email"]})  # fails fast on a bad email
+        mandate = Mandate(True, {"illustrator": opts["sub_email"]},  # fails fast on a bad email
+                          allow_hold=True, allow_capture=True)
         payments = payments_from_settings()
         key = settings.ANTHROPIC_API_KEY
         llm = ClaudeLLM(key, settings.ANTHROPIC_MODEL) if key else NoModel()
         persona = Persona("demo client", Money.of(opts["target"]), Money.of(opts["ceiling"]),
                           seed=1)
         deal = open_deal("Brand identity", opts["client"])
-        agent = FreelancerAgent(llm, SpendGuard(MemoryStore()))
+        guard = SpendGuard(MemoryStore())
+        agent, actor = FreelancerAgent(llm, guard), ActionAgent(llm, guard)
         out = negotiate(deal, demo_card(), "standard", agent, ScriptedClient(persona))
         self.stdout.write(f"negotiation: {out.status}" + (f" at {out.price}" if out.price else ""))
         if out.status != "AGREED":
             return
         set_mandate(deal, mandate)
-        open_hold(deal, payments, "https://example.com/ok", "https://example.com/no")
+        agent_run(deal, payments, actor)  # the agent opens the hold
         self.stdout.write(f"\nAPPROVE AS THE BUYER:\n{deal.approve_url}")
         input("Press Enter after approving... ")
         confirm_hold(deal, payments)
         confirm_delivery(deal)
-        capture(deal, payments)
-        send_payouts(deal, payments, actor="agent")
+        agent_run(deal, payments, actor)  # the agent captures, then pays the sub-contractor
         self.stdout.write("payout sent; waiting for PayPal...")
         for _ in range(opts["wait"]):
             refresh_payouts(deal, payments)
