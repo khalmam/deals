@@ -9,3 +9,5 @@ DATABASES = {"default": parse_database_url(env("DATABASE_URL", required=True))}
 PAYPAL_CLIENT_ID = env("PAYPAL_CLIENT_ID", required=True)
 PAYPAL_CLIENT_SECRET = env("PAYPAL_CLIENT_SECRET", required=True)
 PAYPAL_WEBHOOK_ID = env("PAYPAL_WEBHOOK_ID", required=True)
+ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY", "")
+ANTHROPIC_MODEL = env("ANTHROPIC_MODEL", "claude-sonnet-5-5")

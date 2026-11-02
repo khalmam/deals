@@ -7,3 +7,5 @@ DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memor
 PAYPAL_CLIENT_ID = "test-id"
 PAYPAL_CLIENT_SECRET = "test-secret"
 PAYPAL_WEBHOOK_ID = "test-webhook"
+ANTHROPIC_API_KEY = ""
+ANTHROPIC_MODEL = "test-model"
