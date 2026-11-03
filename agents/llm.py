@@ -43,3 +43,23 @@ class NoModel:
 
     def complete(self, system, messages):
         raise LLMError("no model configured")
+
+
+class BedrockLLM:
+    """Same job as ClaudeLLM, through Amazon Bedrock's Converse API. The client (boto3's
+    'bedrock-runtime') is passed in, so this layer never imports boto3 and tests use a fake."""
+
+    def __init__(self, client, model_id, max_tokens=300):
+        if not model_id:
+            raise LLMError("no Bedrock model id")
+        self._client, self._model, self._max = client, model_id, max_tokens
+
+    def complete(self, system, messages):
+        convo = [{"role": m["role"], "content": [{"text": m["content"]}]} for m in messages]
+        try:
+            r = self._client.converse(modelId=self._model, system=[{"text": system}],
+                                      messages=convo, inferenceConfig={"maxTokens": self._max})
+            blocks = r["output"]["message"]["content"]
+        except Exception as exc:  # throttling, access denied, odd reply shape: all mean no answer
+            raise LLMError(f"bedrock error: {type(exc).__name__}") from exc
+        return "".join(b.get("text", "") for b in blocks)

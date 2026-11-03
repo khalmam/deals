@@ -20,3 +20,4 @@ class WebhookEvent(models.Model):
     resource_id = models.CharField(max_length=64, blank=True)
     received_at = models.DateTimeField(auto_now_add=True)
     applied = models.BooleanField(default=False)
+    payload = models.JSONField(default=dict, blank=True)  # the verified event as PayPal sent it

@@ -1,14 +1,13 @@
 """Negotiate a deal between the freelancer's agent and a simulated client, then show the
 transcript. Uses Claude if ANTHROPIC_API_KEY is set, otherwise the rules engine alone.
 No PayPal calls. Usage: python manage.py negotiate_demo [--ceiling 1650] [--target 1200]"""
-from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from agents.client_sim import Persona, ScriptedClient
 from agents.freelancer import FreelancerAgent
-from agents.llm import ClaudeLLM, NoModel
 from agents.spend_guard import MemoryStore, SpendGuard
 from deals.domain.money import Money
+from deals.management.llm_factory import llm_from_settings
 from deals.services.negotiate import negotiate
 from deals.services.open_deal import open_deal
 from engine.demo_card import demo_card
@@ -25,9 +24,7 @@ class Command(BaseCommand):
         parser.add_argument("--seed", type=int, default=1)
 
     def handle(self, *args, **opts):
-        key = settings.ANTHROPIC_API_KEY
-        llm = ClaudeLLM(key, settings.ANTHROPIC_MODEL) if key else NoModel()
-        who = "Claude" if key else "rules engine only (no ANTHROPIC_API_KEY)"
+        llm, who = llm_from_settings()
         persona = Persona("demo client", Money.of(opts["target"]), Money.of(opts["ceiling"]),
                           patience=opts["patience"], seed=opts["seed"])
         deal = open_deal("Brand identity", "khal2@personal.example.com")

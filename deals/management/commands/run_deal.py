@@ -3,16 +3,15 @@ sub-contractor. A human approves the hold on PayPal's page. Usage:
 python manage.py run_deal --sub-email SANDBOX_SUB_EMAIL [--client EMAIL] [--ceiling 1650]"""
 import time
 
-from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from agents.actor import ActionAgent
 from agents.client_sim import Persona, ScriptedClient
 from agents.freelancer import FreelancerAgent
-from agents.llm import ClaudeLLM, NoModel
 from agents.spend_guard import MemoryStore, SpendGuard
 from deals.domain.mandate import Mandate
 from deals.domain.money import Money
+from deals.management.llm_factory import llm_from_settings
 from deals.management.paypal_factory import payments_from_settings
 from deals.services.agent_run import agent_run
 from deals.services.confirm_hold import confirm_hold
@@ -39,8 +38,8 @@ class Command(BaseCommand):
         mandate = Mandate(True, {"illustrator": opts["sub_email"]},  # fails fast on a bad email
                           allow_hold=True, allow_capture=True)
         payments = payments_from_settings()
-        key = settings.ANTHROPIC_API_KEY
-        llm = ClaudeLLM(key, settings.ANTHROPIC_MODEL) if key else NoModel()
+        llm, who = llm_from_settings()
+        self.stdout.write(f"model: {who}")
         persona = Persona("demo client", Money.of(opts["target"]), Money.of(opts["ceiling"]),
                           seed=1)
         deal = open_deal("Brand identity", opts["client"])

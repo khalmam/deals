@@ -21,4 +21,21 @@ def verify_signature(client: PayPalClient, headers, event, webhook_id):
 
 def parse_event(event):
     res = event.get("resource", {}) or {}
-    return WebhookEvent(event["id"], event["event_type"], str(res.get("id", "")), res)
+    # Most resources carry "id"; a payout item event carries "payout_item_id" instead.
+    rid = res.get("id") or res.get("payout_item_id") or ""
+    return WebhookEvent(event["id"], event["event_type"], str(rid), res)
+
+
+class WebhookGateway:
+    """What the web layer needs from PayPal for webhooks: verify a delivery, parse an event."""
+
+    def __init__(self, client: PayPalClient, webhook_id):
+        if not webhook_id:
+            raise ValueError("PAYPAL_WEBHOOK_ID is not set")
+        self._client, self._webhook_id = client, webhook_id
+
+    def verify(self, headers, raw_event):
+        return verify_signature(self._client, headers, raw_event, self._webhook_id)
+
+    def parse(self, raw_event):
+        return parse_event(raw_event)

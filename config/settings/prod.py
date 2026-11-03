@@ -11,3 +11,6 @@ PAYPAL_CLIENT_SECRET = env("PAYPAL_CLIENT_SECRET", required=True)
 PAYPAL_WEBHOOK_ID = env("PAYPAL_WEBHOOK_ID", required=True)
 ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = env("ANTHROPIC_MODEL", "claude-sonnet-5-5")
+LLM_PROVIDER = env("LLM_PROVIDER", "anthropic")  # "anthropic" or "bedrock"
+AWS_REGION = env("AWS_REGION", "us-east-1")
+BEDROCK_MODEL_ID = env("BEDROCK_MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0")

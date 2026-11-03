@@ -1,4 +1,4 @@
-from django.db import IntegrityError, transaction
+from django.db import transaction
 
 from deals.domain.states import Event, transition
 from deals.models import PaymentRecord
@@ -36,14 +36,15 @@ def record_item_status(rec, status, source_id, payout_item_id, now=None):
 
 
 def apply_webhook(event, now=None):
-    """Apply one verified PayPal event. A repeated event id is ignored."""
-    try:
-        with transaction.atomic():
-            row = WebhookRow.objects.create(event_id=event.event_id, event_type=event.event_type,
-                                            resource_id=event.resource_id)
-    except IntegrityError:
+    """Apply one verified PayPal event. A repeated event id is ignored once it has been handled;
+    a payout-item event that failed half-way is picked up again when PayPal retries it."""
+    row, created = WebhookRow.objects.get_or_create(
+        event_id=event.event_id,
+        defaults={"event_type": event.event_type, "resource_id": event.resource_id})
+    is_item = event.event_type.startswith(PREFIX)
+    if not created and (row.applied or not is_item):
         return "DUPLICATE"
-    if not event.event_type.startswith(PREFIX):
+    if not is_item:
         return "IGNORED"
     rec = PaymentRecord.objects.filter(kind="PAYOUT_ITEM",
                                        paypal_id=_sender_item_id(event.resource)).first()

@@ -2,3 +2,4 @@ Django>=5.1
 httpx>=0.27
 psycopg[binary]>=3.2
 uvicorn>=0.30
+boto3>=1.35
