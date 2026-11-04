@@ -106,3 +106,51 @@ def hold_return(request, deal_id):
     except (DealNotFound, LiveError):
         pass  # the deal page shows where things stand either way
     return redirect("deal", deal_id=deal_id)
+
+
+def agent_directory(request):
+    from deals.services.agent_registry import discover_agents
+
+    agents = discover_agents(
+        query=request.GET.get("q", "")[:100],
+        agent_type=request.GET.get("type", "").upper(),
+        capability=request.GET.get("capability", "")[:80],
+    )
+    return render(request, "web/agents.html", {
+        "active": "agents", "agents": agents, "query": request.GET.get("q", ""),
+        "agent_type": request.GET.get("type", ""),
+    })
+
+
+def api_agents(request):
+    """Public directory: exposes published capabilities, never credentials or mandates."""
+    from deals.services.agent_registry import discover_agents
+
+    if request.method != "GET":
+        return JsonResponse({"error": "Method not allowed."}, status=405)
+    agents = discover_agents(
+        query=request.GET.get("q", "")[:100],
+        agent_type=request.GET.get("type", "").upper(),
+        capability=request.GET.get("capability", "")[:80],
+    )
+    return JsonResponse({"count": len(agents), "results": agents})
+
+
+def api_agent_me(request):
+    """Authenticated external-agent identity check."""
+    from deals.services.agent_registry import authenticate_agent
+
+    if request.method != "GET":
+        return JsonResponse({"error": "Method not allowed."}, status=405)
+    header = request.headers.get("Authorization", "")
+    scheme, _, token = header.partition(" ")
+    agent = None
+    if scheme.lower() == "bearer":
+        agent = authenticate_agent(token.strip(), "directory:read")
+    if agent is None:
+        return JsonResponse({"error": "Valid agent credentials are required."}, status=401)
+    return JsonResponse({
+        "id": str(agent.pk), "name": agent.name, "slug": agent.slug,
+        "type": agent.agent_type, "status": agent.status,
+        "capabilities": agent.capabilities,
+    })

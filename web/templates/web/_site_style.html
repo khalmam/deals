@@ -22,4 +22,20 @@ a.button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 td a{font-weight:600}
 @media print{.nav,.noprint{display:none!important}body{background:#fff;color:#000}
 .card{box-shadow:none}}
+
+.agent-heading{display:flex;justify-content:space-between;align-items:end;gap:1.5rem}
+.agent-heading .meta{letter-spacing:.12em;font-size:.7rem;font-weight:700}
+.agent-filters{display:flex;gap:.625rem;margin-top:2rem;align-items:center}
+.agent-filters input,.agent-filters select{min-width:0;min-height:2.75rem;padding:.5rem 1rem;border:0;border-radius:999px;background:var(--card);color:var(--ink);font:inherit;box-shadow:0 0 0 1px var(--line)}
+.agent-filters input{flex:1}.agent-results{margin-top:2.5rem}.agent-results-head{display:flex;justify-content:space-between;align-items:baseline;gap:1rem}
+.agent-results-head h2{margin-bottom:1rem}.agent-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr));gap:1rem}
+.agent-card{padding:1.25rem;min-width:0}.agent-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+.agent-mark{display:grid;place-items:center;width:2.5rem;height:2.5rem;border-radius:14px;background:var(--glow);color:var(--thread);font-weight:750}
+.agent-status{display:flex;align-items:center;gap:.4rem;color:var(--thread);font-size:.75rem;font-weight:600}
+.agent-status i{width:7px;height:7px;border-radius:50%;background:currentColor}.agent-card h3{margin:.25rem 0 .5rem;font-size:1.125rem;letter-spacing:-.02em}
+.agent-description{min-height:3.5rem;color:var(--mute);font-size:.9rem}.agent-tags{display:flex;flex-wrap:wrap;gap:.4rem;margin:1rem 0}
+.agent-tags span{padding:.25rem .6rem;border-radius:999px;background:var(--bg);color:var(--mute);font-size:.75rem}
+.agent-card-foot{display:flex;justify-content:space-between;gap:.5rem;border-top:1px solid var(--line);padding-top:.8rem;margin-top:1rem}
+.agent-card-foot .meta{font-size:.7rem}.agent-empty{padding:2rem}.agent-connect{display:flex;justify-content:space-between;align-items:center;gap:1.5rem}
+.text-link{font-weight:600;white-space:nowrap}@media(max-width:38rem){.agent-heading,.agent-connect{align-items:flex-start;flex-direction:column}.agent-filters{flex-wrap:wrap}.agent-filters input{flex-basis:100%}.agent-filters select{flex:1}}
 </style>

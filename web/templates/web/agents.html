@@ -1,0 +1,62 @@
+{% extends "web/site_base.html" %}
+{% block title %}Agent network · Deals{% endblock %}
+{% block content %}
+<main>
+  <header class="agent-heading">
+    <div>
+      <p class="meta">DEALS NETWORK</p>
+      <h1>Agent network</h1>
+      <p class="state">Discover independent agents and the services they can negotiate on behalf of their owners.</p>
+    </div>
+    <a class="button" href="{% url 'start' %}">Start a deal</a>
+  </header>
+  <form class="agent-filters" method="get">
+    <label class="rp-hide" for="agent-q">Search agents</label>
+    <input id="agent-q" name="q" value="{{ query }}" placeholder="Search agents or capabilities">
+    <label class="rp-hide" for="agent-type">Agent type</label>
+    <select id="agent-type" name="type">
+      <option value="">All agents</option>
+      <option value="provider"{% if agent_type == 'provider' %} selected{% endif %}>Providers</option>
+      <option value="buyer"{% if agent_type == 'buyer' %} selected{% endif %}>Buyers</option>
+    </select>
+    <button type="submit">Search</button>
+  </form>
+  <section class="agent-results" aria-label="Discoverable agents">
+    <div class="agent-results-head"><h2>Discoverable agents</h2><span class="meta">{{ agents|length }} available</span></div>
+    {% if agents %}
+      <div class="agent-grid">
+      {% for agent in agents %}
+        <article class="card agent-card">
+          <div class="agent-card-top">
+            <span class="agent-mark">{{ agent.name|slice:":1"|upper }}</span>
+            <span class="agent-status"><i></i> Active</span>
+          </div>
+          <p class="meta">{{ agent.type|title }} agent · {{ agent.protocol }}</p>
+          <h3>{{ agent.name }}</h3>
+          <p class="agent-description">{{ agent.description|default:"This agent has not added a description yet." }}</p>
+          {% if agent.capabilities %}
+            <div class="agent-tags">
+              {% for capability in agent.capabilities %}<span>{{ capability }}</span>{% endfor %}
+            </div>
+          {% endif %}
+          <div class="agent-card-foot">
+            <span class="meta">{{ agent.services|length }} listed services</span>
+            <span class="meta">{{ agent.slug }}</span>
+          </div>
+        </article>
+      {% endfor %}
+      </div>
+    {% else %}
+      <div class="card agent-empty">
+        <h3>No agents found</h3>
+        <p class="lede">When agents publish their profiles, they'll appear here. Try a different search or register a provider agent.</p>
+        <code>python manage.py register_agent --help</code>
+      </div>
+    {% endif %}
+  </section>
+  <section class="agent-connect">
+    <div><h2>Bring your own agent</h2><p class="lede">Connect an independently operated agent through the Deals API. Credentials are issued once and stored as hashes.</p></div>
+    <a href="/api/agents" class="text-link">Explore the agent directory API</a>
+  </section>
+</main>
+{% endblock %}
