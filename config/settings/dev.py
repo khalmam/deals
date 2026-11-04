@@ -15,3 +15,4 @@ ANTHROPIC_MODEL = env("ANTHROPIC_MODEL", "claude-sonnet-5-5")
 LLM_PROVIDER = env("LLM_PROVIDER", "anthropic")  # "anthropic" or "bedrock"
 AWS_REGION = env("AWS_REGION", "us-east-1")
 BEDROCK_MODEL_ID = env("BEDROCK_MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0")
+DEMO_SUB_EMAIL = env("DEMO_SUB_EMAIL", "")

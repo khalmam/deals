@@ -2,7 +2,7 @@ from agents.tools import WAIT, build_menu
 from deals.domain.mandate import Mandate
 from deals.domain.states import allowed_events
 
-from .agent_act import agent_act
+from .agent_act import URLS, agent_act
 from .ledger import append
 
 
@@ -12,7 +12,7 @@ def menu_for(deal, terms_changed=False):
                       sent, terms_changed)
 
 
-def agent_run(deal, payments, actor, terms_changed=False, max_steps=4, now=None):
+def agent_run(deal, payments, actor, terms_changed=False, max_steps=4, now=None, urls=None):
     """Let the agent take every action it is allowed to take now, then stop. It stops when it
     chooses to wait, when nothing is allowed (a human step is next), or when an action fails."""
     results = []
@@ -25,7 +25,8 @@ def agent_run(deal, payments, actor, terms_changed=False, max_steps=4, now=None)
             append(deal, "AGENT_ACTION", {"tool": pick.tool, "ok": False,
                                           "error": "not on the menu", "source": pick.source}, now)
             break
-        result = agent_act(deal, payments, pick.tool, pick.reason, pick.source, now)
+        result = agent_act(deal, payments, pick.tool, pick.reason, pick.source, now,
+                           urls or URLS)
         results.append(result)
         if not result.ok:
             break

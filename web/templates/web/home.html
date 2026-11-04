@@ -1,0 +1,41 @@
+{% extends "web/site_base.html" %}
+{% block title %}Deals · An agent negotiates, PayPal moves the money{% endblock %}
+{% block content %}
+<main class="landing">
+<header>
+  <h1>An agent negotiates the deal. PayPal moves the money.</h1>
+  <p class="state">A freelancer’s agent haggles with a client’s agent inside limits a rules engine enforces. Once they agree, PayPal holds the payment, captures it when delivery is confirmed and pays the sub-contractors.</p>
+  <div class="cta">
+    <a class="button" href="{% url 'start' %}">Start a deal</a>
+    {% if site.showcase %}<a class="button ghost" href="{% url 'deal' site.showcase %}">See a finished deal</a>{% endif %}
+    <a class="button ghost" href="{% url 'deals' %}">All deals</a>
+  </div>
+</header>
+{% if site.deals %}
+<p class="proof"><strong>{{ site.deals }}</strong> deals run, <strong>{{ site.paid_out }}</strong> paid out. <strong>{{ site.entries }}</strong> ledger entries, each locked to the one before it.</p>
+{% endif %}
+
+<section aria-labelledby="h-how">
+  <h2 id="h-how">How it works</h2>
+  <ol class="steps">
+    <li class="done"><span class="step-name">1. Negotiate</span><span class="step-time">The agent proposes prices. The rules engine sets the window, and the model can only pick inside it.</span></li>
+    <li class="done"><span class="step-name">2. Hold</span><span class="step-time">A PayPal order with intent AUTHORIZE holds the money for up to 29 days. It is a hold, not escrow.</span></li>
+    <li class="done"><span class="step-name">3. Deliver</span><span class="step-time">Capture happens only after confirmed delivery. If terms change, the agent voids the hold.</span></li>
+    <li class="done"><span class="step-name">4. Pay out</span><span class="step-time">Approved sub-contractors are paid, and PayPal webhooks confirm each payout.</span></li>
+  </ol>
+</section>
+
+<section aria-labelledby="h-paypal">
+  <h2 id="h-paypal">Built on PayPal</h2>
+  <div class="card">
+    <ul class="plain">
+      <li><strong>Orders</strong> with intent AUTHORIZE for the payment hold. The agreed terms’ hash is stored in the hold’s <code>custom_id</code>.</li>
+      <li><strong>Payments</strong> for capture, void and refund.</li>
+      <li><strong>Payouts</strong> to the approved sub-contractors.</li>
+      <li><strong>Webhooks</strong>, signature-verified and applied once per event.</li>
+    </ul>
+    <p class="meta" style="margin-top:1rem">Sandbox only. Rules decide, the AI proposes.</p>
+  </div>
+</section>
+</main>
+{% endblock %}

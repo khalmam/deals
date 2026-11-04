@@ -1,0 +1,27 @@
+{% extends "web/site_base.html" %}
+{% block title %}Start a deal{% endblock %}
+{% block content %}
+<main>
+  <h1>Start a deal</h1>
+  <p class="state">You play the client. The freelancer’s agent opens with the Standard brand package at 1800.00 USD. Haggle in your own words, approve the hold in PayPal’s sandbox, confirm delivery, and watch the money move.</p>
+  <form class="say" data-start><button type="submit">Start negotiating</button></form>
+  <p class="meta" data-note role="status"></p>
+  <p class="lede">The agent can never go below its floor. Whatever you type, the rules engine decides and every move goes in the sealed ledger.</p>
+</main>
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelector('[data-start]').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var b = this.querySelector('button'), note = document.querySelector('[data-note]');
+  b.disabled = true; note.textContent = 'Opening the deal…';
+  fetch('/api/deals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.url) { location.href = d.url; return; }
+      note.textContent = d.error || 'Could not start a deal.'; b.disabled = false;
+    })
+    .catch(function () { note.textContent = 'Could not reach the server.'; b.disabled = false; });
+});
+</script>
+{% endblock %}

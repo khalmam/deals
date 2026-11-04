@@ -1,0 +1,47 @@
+<section class="move" aria-labelledby="h-move">
+  {% if deal.stage == 'negotiating' %}
+  <h2 id="h-move">Your move</h2>
+  <p class="lede">You are the client. The freelancer’s agent is asking <strong class="num">{{ deal.ask }}</strong>. Reply in your own words, for example “can you do twelve hundred?” or “fine, I’ll take it”.</p>
+  <form class="say" data-say autocomplete="off">
+    <input name="message" maxlength="500" placeholder="Type your reply" aria-label="Your reply to the freelancer" required>
+    <button type="submit">Send</button>
+  </form>
+  {% elif deal.stage == 'agreed' %}
+  <h2 id="h-move">Next step</h2>
+  <p class="lede">The terms are agreed. The agent has not opened the PayPal hold yet.</p>
+  <div class="row-actions"><button data-post="/advance">Let the agent open the hold</button></div>
+  {% elif deal.stage == 'approval' %}
+  <h2 id="h-move">Next step</h2>
+  <p class="lede">The agent opened a payment hold on PayPal. Approve it with your sandbox buyer account. No money is taken until delivery.</p>
+  <div class="row-actions"><a class="button" href="{{ deal.approve_url }}">Approve the hold on PayPal</a></div>
+  {% elif deal.stage == 'held' %}
+  <h2 id="h-move">Next step</h2>
+  <p class="lede">The hold is active. Confirm delivery and the agent captures the payment and pays the sub-contractor. If the terms changed, tell the agent and it can void the hold instead.</p>
+  <div class="row-actions">
+    <button data-post="/delivery">I received the work</button>
+    <button class="ghost" data-post="/cancel">The terms changed</button>
+  </div>
+  {% elif deal.stage == 'delivered' %}
+  <h2 id="h-move">Next step</h2>
+  <p class="lede">Delivery is confirmed. The agent has not captured the payment yet.</p>
+  <div class="row-actions"><button data-post="/advance">Let the agent capture</button></div>
+  {% elif deal.stage == 'captured' %}
+  <h2 id="h-move">Waiting for PayPal</h2>
+  <p class="lede">The payment is captured and the payouts are sent. PayPal confirms each payout, and this page updates when it does.</p>
+  <span data-autorefresh hidden></span>
+  <div class="row-actions"><button class="ghost" data-post="/refresh">Refresh from PayPal</button></div>
+  {% elif deal.stage == 'paid' %}
+  <h2 id="h-move">Paid out</h2>
+  <p class="lede">The money moved, the sub-contractor was paid, and every step is in the ledger.</p>
+  <div class="row-actions"><a class="button ghost" href="{% url 'receipt' deal.id %}">Sealed receipt</a><a class="button" href="{% url 'start' %}">Start another deal</a></div>
+  {% elif deal.stage == 'voided' %}
+  <h2 id="h-move">Hold voided</h2>
+  <p class="lede">The terms changed, so the agent released the hold. The client’s money was never captured.</p>
+  <div class="row-actions"><a class="button" href="{% url 'start' %}">Start another deal</a></div>
+  {% else %}
+  <h2 id="h-move">Negotiation ended</h2>
+  <p class="lede">Nobody agreed, so no money was held.</p>
+  <div class="row-actions"><a class="button" href="{% url 'start' %}">Start another deal</a></div>
+  {% endif %}
+  <p class="meta" data-note role="status"></p>
+</section>

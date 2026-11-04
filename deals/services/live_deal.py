@@ -1,0 +1,122 @@
+"""The live flow the web layer calls. Each function takes the deal id, does one step and
+returns plain data. Collaborators come in as Deps, so tests can pass fakes."""
+from dataclasses import dataclass
+from functools import wraps
+
+from agents.intent import read_intent
+from deals.domain.mandate import MandateViolation
+from deals.domain.money import MoneyError
+from deals.domain.states import IllegalTransition
+from deals.models import Deal
+
+from .agent_act import URLS
+from .agent_run import agent_run
+from .confirm_hold import TermsMismatch, confirm_hold
+from .deal_view import DealNotFound
+from .delivery_capture_void import confirm_delivery, void
+from .mandate import set_mandate
+from .negotiate_round import NegotiationClosed, current_ask, play_round, start_negotiation
+from .open_deal import open_deal
+from .refresh_payouts import refresh_payouts
+from .send_payouts import PayoutsAlreadySent
+
+HINT = "Name a price you would pay, accept the current ask, or say you are walking away."
+ERRORS = (IllegalTransition, MandateViolation, TermsMismatch, PayoutsAlreadySent,
+          NegotiationClosed, MoneyError)
+
+
+class LiveError(Exception):
+    """A step the rules refused. The message is safe to show the visitor."""
+
+
+@dataclass(frozen=True)
+class Deps:
+    card: object
+    freelancer: object
+    actor: object
+    guard: object
+    llm: object
+    payments: object
+    mandate: object
+    bundle_id: str = "standard"
+
+
+def _guarded(fn):
+    @wraps(fn)
+    def inner(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except ERRORS as exc:
+            raise LiveError(str(exc)) from exc
+    return inner
+
+
+def _deal(deal_id):
+    deal = Deal.objects.filter(pk=deal_id).first()
+    if deal is None:
+        raise DealNotFound(str(deal_id))
+    return deal
+
+
+def start_deal(deps, title="Brand identity", client_email="buyer@personal.example.com",
+               now=None):
+    deal = open_deal(title, client_email, now)
+    start_negotiation(deal, deps.card, deps.bundle_id, now)
+    return str(deal.pk)
+
+
+@_guarded
+def say(deps, deal_id, text, urls=URLS, now=None):
+    deal = _deal(deal_id)
+    ask = current_ask(deal)
+    label = f"{ask.amount} {ask.currency}" if ask else ""
+    intent = read_intent(deps.llm, deps.guard, str(deal.pk), text, label)
+    if intent.action == "UNCLEAR":
+        return {"status": "UNCLEAR", "message": HINT}
+    out = play_round(deal, deps.card, deps.bundle_id, deps.freelancer, intent.action,
+                     intent.price, text, now=now)
+    if out.status == "AGREED":
+        set_mandate(deal, deps.mandate, now)
+        agent_run(deal, deps.payments, deps.actor, urls=urls, now=now)  # opens the hold
+    return {"status": out.status, "read_by": intent.source}
+
+
+@_guarded
+def advance(deps, deal_id, urls=URLS, now=None):
+    """Let the agent take whatever step is allowed next (the hold, or the capture)."""
+    deal = _deal(deal_id)
+    agent_run(deal, deps.payments, deps.actor, urls=urls, now=now)
+    return {"state": deal.state}
+
+
+@_guarded
+def approve_return(deps, deal_id, now=None):
+    """PayPal sent the buyer back after approving: authorize and check the terms hash."""
+    deal = _deal(deal_id)
+    confirm_hold(deal, deps.payments, now)
+    return {"state": deal.state}
+
+
+@_guarded
+def deliver(deps, deal_id, now=None):
+    deal = _deal(deal_id)
+    confirm_delivery(deal, "client", now)
+    agent_run(deal, deps.payments, deps.actor, now=now)  # captures, then pays the sub-contractor
+    refresh_payouts(deal, deps.payments, now)
+    return {"state": deal.state}
+
+
+@_guarded
+def cancel(deps, deal_id, now=None):
+    """The terms changed: the agent is shown that and should void. If it does not, we void."""
+    deal = _deal(deal_id)
+    done = agent_run(deal, deps.payments, deps.actor, terms_changed=True, now=now)
+    if not any(r.ok and r.tool == "void" for r in done):
+        void(deal, deps.payments, now)
+    return {"state": deal.state}
+
+
+@_guarded
+def refresh(deps, deal_id, now=None):
+    deal = _deal(deal_id)
+    return {"changed": refresh_payouts(deal, deps.payments, now), "state": deal.state}

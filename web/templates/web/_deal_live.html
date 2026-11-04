@@ -1,0 +1,61 @@
+<script>
+(function () {
+  var id = document.body.dataset.deal;
+  var ITEMS = '.steps > li, .talk > li, .thread > li';
+  function all(sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+  function api(path, body) {
+    return fetch('/api/deals/' + id + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
+      .catch(function () { return { ok: false, data: { error: 'The server hit an error. Reload and try again.' } }; });
+  }
+  function keyOf(n) { return n.parentNode.className + '|' + n.textContent.replace(/\s+/g, ' ').trim(); }
+  function typing() { var a = document.activeElement; return a && a.tagName === 'INPUT' && a.value.length > 0; }
+  function note(msg) { var n = document.querySelector('[data-note]'); if (n) { n.textContent = msg || ''; } }
+  function refresh(force) {
+    if (!force && (document.hidden || typing())) { return Promise.resolve(); }
+    return fetch(location.pathname, { headers: { 'X-Requested-With': 'live' } })
+      .then(function (r) { return r.ok ? r.text() : null; })
+      .then(function (html) {
+        if (!html) { return; }
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        if (!force && doc.body.dataset.head === document.body.dataset.head) { return; }
+        var seen = {};
+        all(ITEMS).forEach(function (n) { seen[keyOf(n)] = true; });
+        ['main', '.seal'].forEach(function (sel) {
+          var a = document.querySelector(sel), b = doc.querySelector(sel);
+          if (a && b) { a.innerHTML = b.innerHTML; }
+        });
+        all(ITEMS).forEach(function (n) { if (seen[keyOf(n)]) { n.classList.add('seen'); } });
+        document.body.dataset.head = doc.body.dataset.head;
+      })
+      .catch(function () {});
+  }
+  document.addEventListener('submit', function (e) {
+    var f = e.target;
+    if (!f.matches || !f.matches('[data-say]')) { return; }
+    e.preventDefault();
+    var input = f.querySelector('input'), btn = f.querySelector('button'), text = input.value.trim();
+    if (!text) { return; }
+    btn.disabled = true; input.disabled = true; note('The agent is reading your message…');
+    api('/offers', { message: text }).then(function (res) {
+      return refresh(true).then(function () {
+        var d = res.data;
+        note(res.ok ? (d.status === 'UNCLEAR' ? d.message : '') : (d.error || 'Something went wrong.'));
+        var i = document.querySelector('[data-say] input'); if (i) { i.focus(); }
+      });
+    });
+  });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-post]') : null;
+    if (!b) { return; }
+    b.disabled = true; note('Working…');
+    api(b.dataset.post, {}).then(function (res) {
+      return refresh(true).then(function () { note(res.ok ? '' : (res.data.error || 'Something went wrong.')); });
+    });
+  });
+  setInterval(function () { refresh(false); }, 3000);
+  setInterval(function () {
+    if (!document.hidden && document.querySelector('[data-autorefresh]')) { api('/refresh'); }
+  }, 5000);
+})();
+</script>

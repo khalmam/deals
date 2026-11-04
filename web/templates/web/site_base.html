@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>{% block title %}Deals{% endblock %}</title>
+{% include "web/_deal_style.html" %}
+{% include "web/_site_style.html" %}
+{% include "web/_live_style.html" %}
+</head>
+<body{% block body_attrs %}{% endblock %}>
+{% include "web/_nav.html" %}
+{% block content %}{% endblock %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

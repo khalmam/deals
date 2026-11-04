@@ -1,0 +1,8 @@
+<nav class="nav" aria-label="Main">
+  <a class="brand" href="{% url 'home' %}">Deals</a>
+  <ul>
+    <li><a href="{% url 'start' %}"{% if active == 'start' %} aria-current="page"{% endif %}>Start a deal</a></li>
+    <li><a href="{% url 'deals' %}"{% if active == 'deals' %} aria-current="page"{% endif %}>Deals</a></li>
+    <li><a href="{% url 'activity' %}"{% if active == 'activity' %} aria-current="page"{% endif %}>PayPal activity</a></li>
+  </ul>
+</nav>

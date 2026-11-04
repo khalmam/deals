@@ -1,0 +1,24 @@
+{% extends "web/site_base.html" %}
+{% block title %}Deals{% endblock %}
+{% block content %}
+<main>
+<h1>Deals</h1>
+<p class="state">Every deal the agent has negotiated. Open one to see the negotiation, the money actions and the sealed ledger.</p>
+<section aria-labelledby="h-list">
+  <h2 id="h-list" class="rp-hide">All deals</h2>
+  {% if deals %}
+  <div class="card"><div class="scroll"><table>
+    <thead><tr><th scope="col">Deal</th><th scope="col">State</th><th scope="col">Total</th><th scope="col">Client</th><th scope="col">Opened</th></tr></thead>
+    <tbody>
+    {% for d in deals %}
+      <tr><td><a href="{% url 'deal' d.id %}">{{ d.title }}</a> <span class="meta">{{ d.short_id }}</span></td>
+        <td>{{ d.state_label }}</td>
+        <td class="num">{% if d.total %}{{ d.total }} {{ d.currency }}{% else %}&mdash;{% endif %}</td>
+        <td>{{ d.client_email }}</td><td>{{ d.opened }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div></div>
+  {% else %}<p class="lede">No deals yet.</p>{% endif %}
+</section>
+</main>
+{% endblock %}

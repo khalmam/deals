@@ -1,0 +1,42 @@
+{% extends "web/site_base.html" %}
+{% block title %}Sealed receipt · {{ r.title }}{% endblock %}
+{% block content %}
+<main>
+<header class="hero">
+  <div>
+    <h1>Sealed receipt</h1>
+    <p class="state">{{ r.title }} · {{ r.state_label }}</p>
+    <p class="meta">Deal {{ r.short_id }}</p>
+    <p class="noprint"><button type="button" class="ghost" onclick="window.print()">Print receipt</button>
+      <a href="{% url 'deal' r.deal_id %}">Back to the deal</a></p>
+  </div>
+  {% if r.total %}<p class="amount num"><span>Total</span>{{ r.total }}</p>{% endif %}
+</header>
+
+<section aria-labelledby="h-seal">
+  <h2 id="h-seal">Seal</h2>
+  <div class="badge{% if not r.intact %} bad{% endif %}" role="status"><span class="dot"></span>
+    <span>{% if r.intact %}Intact. All {{ r.entries|length }} entries chain correctly.{% else %}Broken at entry {{ r.broken_seq }}. That entry or an earlier one was changed.{% endif %}</span></div>
+  <div class="card" style="margin-top:1rem"><dl class="terms">
+    <div><dt>Deal id</dt><dd><code>{{ r.deal_id }}</code></dd></div>
+    <div><dt>Terms hash</dt><dd><code>{{ r.terms_hash }}</code></dd></div>
+    <div><dt>Head hash</dt><dd><code>{{ r.head_hash }}</code></dd></div>
+    <div><dt>PayPal order</dt><dd><code>{{ r.paypal.order_id|default:"none" }}</code></dd></div>
+    <div><dt>PayPal authorization</dt><dd><code>{{ r.paypal.authorization_id|default:"none" }}</code></dd></div>
+    <div><dt>PayPal capture</dt><dd><code>{{ r.paypal.capture_id|default:"none" }}</code></dd></div>
+  </dl></div>
+</section>
+
+<section aria-labelledby="h-entries">
+  <h2 id="h-entries">Entries</h2>
+  <div class="card"><div class="scroll"><table>
+    <thead><tr><th scope="col">#</th><th scope="col">Event</th><th scope="col">Time</th><th scope="col">Hash</th></tr></thead>
+    <tbody>
+    {% for e in r.entries %}
+      <tr><td class="num">{{ e.seq }}</td><td>{{ e.kind }}</td><td>{{ e.ts }}</td><td><code title="{{ e.hash }}">{{ e.short_hash }}</code></td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div></div>
+</section>
+</main>
+{% endblock %}

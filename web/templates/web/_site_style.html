@@ -1,0 +1,25 @@
+<style>
+a{color:var(--ink);text-underline-offset:3px}
+.nav{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;
+gap:1rem;padding:.625rem clamp(1.25rem,5vw,3rem);background:var(--bar);
+border-bottom:1px solid var(--line);-webkit-backdrop-filter:blur(24px) saturate(180%);
+backdrop-filter:blur(24px) saturate(180%)}
+.nav .brand{font-weight:700;letter-spacing:-.02em;text-decoration:none}
+.nav ul{display:flex;gap:1.25rem;list-style:none;margin:0;padding:0;font-size:.9375rem}
+.nav ul a{text-decoration:none;color:var(--mute)}
+.nav ul a[aria-current]{color:var(--ink);font-weight:600}
+.landing h1{max-width:20ch;font-size:clamp(2.25rem,6vw,3.5rem)}
+.landing .state{max-width:56ch;font-size:1.1875rem}
+.cta{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;margin-top:1.5rem}
+a.button{display:inline-flex;align-items:center;min-height:2.75rem;padding:.5rem 1.25rem;
+border-radius:999px;background:var(--me);color:var(--on-me);font-weight:600;text-decoration:none;
+transition:transform 160ms var(--out)}
+a.button:active{transform:scale(.97)}
+a.button.ghost{background:transparent;color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+a.button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.steps .step-time{font-size:.875rem;line-height:1.45}
+.plain{margin:0;padding-left:1.1rem;line-height:1.7}
+td a{font-weight:600}
+@media print{.nav,.noprint{display:none!important}body{background:#fff;color:#000}
+.card{box-shadow:none}}
+</style>

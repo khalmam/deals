@@ -1,0 +1,121 @@
+{% extends "web/site_base.html" %}
+{% block title %}{{ deal.title }} · Deal {{ deal.short_id }}{% endblock %}
+{% block body_attrs %} data-deal="{{ deal.id }}" data-head="{{ deal.head_hash }}"{% endblock %}
+{% block content %}
+<main>
+<header class="hero">
+  <div>
+    <h1>{{ deal.title }}</h1>
+    <p class="state">{{ deal.state_label }}</p>
+    <p class="meta">{{ deal.client_email }} · Deal {{ deal.short_id }}</p>
+    <p class="noprint"><a href="{% url 'receipt' deal.id %}">Sealed receipt</a> · <a href="{% url 'deals' %}">All deals</a></p>
+  </div>
+  {% if deal.total %}<p class="amount num"><span>Agreed total</span>{{ deal.total }} <small>{{ deal.currency }}</small></p>{% endif %}
+</header>
+{% if deal.proof.actions %}
+<p class="proof">The model decided <strong>{{ deal.proof.model }} of {{ deal.proof.actions }}</strong> agent actions. All <strong>{{ deal.proof.entries }}</strong> ledger entries are hash-chained, and the agreed terms are anchored in PayPal’s own record.</p>
+{% endif %}
+
+{% if deal.stage != 'negotiating' %}<div style="margin-top:2rem">{% include "web/_deal_move.html" %}</div>{% endif %}
+
+<section aria-labelledby="h-status">
+  <h2 id="h-status">Status</h2>
+  <ol class="steps">
+  {% for s in deal.timeline %}
+    <li{% if s.done %} class="done"{% endif %}{% if s.current %} aria-current="step"{% endif %}>
+      <span class="step-name">{{ s.label }}</span>
+      <span class="step-time">{% if s.done %}{{ s.time }}{% else %}Pending{% endif %}</span>
+    </li>
+  {% endfor %}
+  </ol>
+</section>
+
+<section aria-labelledby="h-talk">
+  <h2 id="h-talk">Negotiation</h2>
+  {% if deal.transcript %}
+  <ol class="talk">
+  {% for m in deal.transcript %}
+    <li class="{% if m.who == 'Client' %}client{% else %}freelancer{% endif %}">
+      <p class="who">{{ m.who }}{% if m.walked_away %} walked away{% endif %}</p>
+      {% if m.price %}<p class="price num">{{ m.price }} <small>{{ m.currency }}</small></p>{% endif %}
+      {% if m.message %}<p class="said">{{ m.message }}</p>{% endif %}
+      {% if m.source %}<p class="meta">Price set by {{ m.source }}</p>{% endif %}
+      {% if m.notes %}<p class="meta">Notes: {{ m.notes|join:", " }}</p>{% endif %}
+    </li>
+  {% endfor %}
+  </ol>
+  {% else %}<p class="lede">No negotiation recorded yet.</p>{% endif %}
+</section>
+
+{% if deal.stage == 'negotiating' %}<div style="margin-top:1.5rem">{% include "web/_deal_move.html" %}</div>{% endif %}
+
+<section aria-labelledby="h-terms">
+  <h2 id="h-terms">Terms</h2>
+  {% if deal.terms.bundle %}
+  <div class="card">
+  <dl class="terms">
+    <div><dt>Bundle</dt><dd>{{ deal.terms.bundle }}</dd></div>
+    <div><dt>Agreed total</dt><dd class="num">{{ deal.total }} {{ deal.currency }}</dd></div>
+    <div><dt>List price</dt><dd class="num">{{ deal.terms.list_price }} {{ deal.currency }}</dd></div>
+    <div><dt>Freelancer net</dt><dd class="num">{{ deal.terms.freelancer_net }} {{ deal.currency }}</dd></div>
+    <div><dt>Payment terms</dt><dd>Net {{ deal.terms.net_days }} days, {{ deal.terms.late_fee_pct }}% late fee</dd></div>
+    <div><dt>Terms hash</dt><dd><code>{{ deal.terms.hash }}</code></dd></div>
+  </dl>
+  <div class="scroll"><table>
+    <caption>Line items</caption>
+    <thead><tr><th scope="col">Item</th><th scope="col">Amount</th></tr></thead>
+    <tbody>{% for i in deal.terms.line_items %}<tr><td>{{ i.name }}</td><td class="num">{{ i.amount }} {{ deal.currency }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% if deal.terms.payouts %}
+  <div class="scroll"><table>
+    <caption>Sub-contractor payouts</caption>
+    <thead><tr><th scope="col">Sub-contractor</th><th scope="col">Amount</th></tr></thead>
+    <tbody>{% for p in deal.terms.payouts %}<tr><td>{{ p.sub_id }}</td><td class="num">{{ p.amount }} {{ deal.currency }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% endif %}
+  </div>
+  {% else %}<p class="lede">No terms agreed yet.</p>{% endif %}
+</section>
+
+<section aria-labelledby="h-agent">
+  <h2 id="h-agent">Agent actions</h2>
+  <p class="lede">Each row is a money action the agent chose. It runs only if the deal state and the owner’s mandate allow it, and refused attempts are recorded too.</p>
+  {% if deal.actions %}
+  <div class="card"><div class="scroll"><table>
+    <thead><tr><th scope="col">Time</th><th scope="col">Action</th><th scope="col">Result</th><th scope="col">Decided by</th><th scope="col">Why</th></tr></thead>
+    <tbody>
+    {% for a in deal.actions %}
+      <tr><td>{{ a.time }}</td><td>{{ a.tool }}</td>
+        <td class="{% if a.ok %}done-text{% else %}refused{% endif %}">{{ a.result }}</td>
+        <td{% if a.decided_by == "Model" %} class="model"{% endif %}>{{ a.decided_by }}</td><td>{{ a.why }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div></div>
+  {% else %}<p class="lede">The agent has not acted yet.</p>{% endif %}
+</section>
+</main>
+
+<aside id="ledger" class="seal" aria-labelledby="h-ledger">
+  <h2 id="h-ledger">Sealed record</h2>
+  <p class="pt-sub">Every entry is locked to the one before it. Updates live.</p>
+  <p class="noprint"><button type="button" class="ghost" onclick="location.reload()">Verify ledger</button></p>
+  {% if deal.verified %}
+  <div class="badge{% if not deal.verified.intact %} bad{% endif %}" role="status"><span class="dot"></span>
+    <span>{% if deal.verified.intact %}Intact. {{ deal.verified.checked }} entries verified.{% else %}Broken at entry {{ deal.verified.broken_seq }}. That entry or an earlier one was changed.{% endif %}</span></div>
+  {% endif %}
+  <ol class="thread">
+  {% for e in deal.ledger %}
+    <li class="row {{ e.state }}" style="--dot:{{ e.color }}">
+      <span class="line"></span><span class="node"></span>
+      <div class="body">
+        <div class="top"><span class="kind">{{ e.label }}</span><span class="by">{{ e.date }}</span></div>
+        {% if e.summary %}<div class="sum">{{ e.summary }}</div>{% endif %}
+        <div class="hash" title="{{ e.hash }}">seal {{ e.short_hash }}, {% if e.first %}first entry{% else %}follows {{ e.prev_short }}{% endif %}</div>
+      </div>
+    </li>
+  {% endfor %}
+  </ol>
+  {% if deal.head_hash %}<p class="meta">Head hash <code>{{ deal.head_hash }}</code></p>{% endif %}
+</aside>
+{% endblock %}
+{% block scripts %}{% include "web/_deal_live.html" %}{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "web/site_base.html" %}
+{% block title %}PayPal activity{% endblock %}
+{% block content %}
+<main>
+<h1>PayPal activity</h1>
+<p class="state">The webhook events PayPal has sent. Each one is signature-checked before it is stored, and a repeated delivery is applied only once.</p>
+<section aria-labelledby="h-events">
+  <h2 id="h-events" class="rp-hide">Events</h2>
+  {% if events %}
+  <div class="card"><div class="scroll"><table>
+    <thead><tr><th scope="col">Received</th><th scope="col">Event</th><th scope="col">Resource</th><th scope="col">Applied</th></tr></thead>
+    <tbody>
+    {% for e in events %}
+      <tr><td>{{ e.received }}</td><td>{{ e.type }}</td><td><code>{{ e.resource|default:"none" }}</code></td>
+        <td class="{% if e.applied %}done-text{% endif %}">{% if e.applied %}Applied{% else %}Recorded{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div></div>
+  {% else %}<p class="lede">No PayPal events received yet. They appear here as soon as PayPal delivers one to <code>/webhooks/paypal/</code>.</p>{% endif %}
+</section>
+</main>
+{% endblock %}
