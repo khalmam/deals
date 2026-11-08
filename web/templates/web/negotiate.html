@@ -1,0 +1,67 @@
+{% extends "web/site_base.html" %}
+{% block title %}Negotiate{% endblock %}
+{% block content %}
+<main>
+  <h1>Negotiate with a provider’s agent</h1>
+  <p class="state">Choose a provider, set the most you will pay and the price you would be happy with. A buyer agent negotiates for you within those limits, using the same protocol any outside agent would. Then you approve the PayPal hold yourself.</p>
+  {% if providers %}
+  <form class="say" data-neg>
+    <label>Provider
+      <select name="provider" data-provider>
+        {% for p in providers %}<option value="{{ p.slug }}">{{ p.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Service <select name="bundle" data-bundle></select></label>
+    <label>Most you will pay <input name="max_price" type="number" min="1" step="1" required data-max></label>
+    <label>Price you would be happy with <input name="target_price" type="number" min="1" step="1" required data-target></label>
+    <button type="submit">Start negotiating</button>
+  </form>
+  <p class="meta" data-note role="status"></p>
+  <p class="lede">The buyer agent never goes above your maximum, and the provider’s agent never goes below its own floor. Every message is recorded, hash-linked, in the ledger.</p>
+  {{ providers|json_script:"providers-data" }}
+  {% else %}
+  <p class="state">No provider agent is hosted here yet. Providers that run on their own are negotiated with from the command line.</p>
+  {% endif %}
+</main>
+{% endblock %}
+{% block scripts %}
+{% if providers %}
+<script>
+var data = JSON.parse(document.getElementById('providers-data').textContent);
+var form = document.querySelector('[data-neg]'), note = document.querySelector('[data-note]');
+var providerSel = form.querySelector('[data-provider]'), bundleSel = form.querySelector('[data-bundle]');
+function fillBundles() {
+  var p = data.find(function (x) { return x.slug === providerSel.value; });
+  bundleSel.innerHTML = '';
+  p.services.filter(function (s) { return s.list_price; }).forEach(function (s) {
+    var o = document.createElement('option');
+    o.value = s.id; o.textContent = s.name + ' · from ' + s.list_price + ' ' + s.currency;
+    o.dataset.price = s.list_price; bundleSel.appendChild(o);
+  });
+  suggest();
+}
+function suggest() {
+  var o = bundleSel.selectedOptions[0]; if (!o) return;
+  var list = parseFloat(o.dataset.price);
+  form.querySelector('[data-max]').value = Math.round(list * 0.8);
+  form.querySelector('[data-target]').value = Math.round(list * 0.72);
+}
+providerSel.addEventListener('change', fillBundles);
+bundleSel.addEventListener('change', suggest);
+fillBundles();
+form.addEventListener('submit', function (e) {
+  e.preventDefault();
+  var b = form.querySelector('button'); b.disabled = true; note.textContent = 'The agents are negotiating…';
+  fetch('/api/ui/negotiate', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider: providerSel.value, bundle: bundleSel.value,
+      max_price: form.max_price.value, target_price: form.target_price.value }) })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.deal_url) { location.href = d.deal_url; return; }
+      note.textContent = d.error || 'Could not negotiate.'; b.disabled = false;
+    })
+    .catch(function () { note.textContent = 'Could not reach the server.'; b.disabled = false; });
+});
+</script>
+{% endif %}
+{% endblock %}

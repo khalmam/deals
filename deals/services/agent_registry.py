@@ -7,12 +7,19 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from deals.models import AgentCredential, AgentProfile
+from engine.profile_card import is_bundle
+
+from .agent_deals import AgentDealError, check_provider
+from .catalogue import public_catalogue
 
 DEFAULT_SCOPES = ["directory:read"]
+RESERVED = {"me"}  # /api/agents/me is the caller's own identity
 
 
 def _unique_slug(name):
     base = slugify(name)[:100] or "agent"
+    if base in RESERVED:
+        base = f"{base}-agent"
     candidate, suffix = base, 2
     while AgentProfile.objects.filter(slug=candidate).exists():
         candidate = f"{base[:110]}-{suffix}"
@@ -23,6 +30,12 @@ def _unique_slug(name):
 def register_agent(*, name, agent_type, owner_name, owner_email, **fields):
     if agent_type not in {AgentProfile.PROVIDER, AgentProfile.BUYER}:
         raise ValueError("Agent type must be PROVIDER or BUYER.")
+    if agent_type == AgentProfile.PROVIDER and any(map(is_bundle, fields.get("services") or [])):
+        try:
+            check_provider(fields["services"], fields.get("mandate") or {},
+                           require_floor=bool(fields.get("hosted")))
+        except AgentDealError as exc:
+            raise ValueError(str(exc)) from exc
     profile = AgentProfile.objects.create(
         name=name.strip(), slug=_unique_slug(name), agent_type=agent_type,
         owner_name=owner_name.strip(), owner_email=owner_email.strip(), **fields,
@@ -77,7 +90,14 @@ def discover_agents(*, query="", agent_type="", capability=""):
         results.append({
             "id": str(agent.id), "name": agent.name, "slug": agent.slug,
             "type": agent.agent_type, "description": agent.description,
-            "capabilities": capabilities, "services": agent.services,
+            "capabilities": capabilities, "hosted": agent.hosted,
+            "services": public_catalogue(agent.services),
             "protocol": agent.protocol, "endpoint_available": bool(agent.endpoint_url),
         })
     return results
+
+
+def get_agent(slug):
+    """One public agent with its catalogue, or None."""
+    found = [a for a in discover_agents() if a["slug"] == slug]
+    return found[0] if found else None

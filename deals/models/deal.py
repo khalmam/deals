@@ -20,5 +20,10 @@ class Deal(models.Model):
     approve_url = models.URLField(max_length=500, blank=True)
     auth_id = models.CharField(max_length=64, blank=True)
     authorization_expires = models.CharField(max_length=40, blank=True)
+    provider = models.ForeignKey("deals.AgentProfile", null=True, blank=True,
+                                 on_delete=models.SET_NULL, related_name="deals_as_provider")
+    buyer = models.ForeignKey("deals.AgentProfile", null=True, blank=True,
+                              on_delete=models.SET_NULL, related_name="deals_as_buyer")
+    bundle_id = models.CharField(max_length=40, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

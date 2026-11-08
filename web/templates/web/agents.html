@@ -39,6 +39,9 @@
               {% for capability in agent.capabilities %}<span>{{ capability }}</span>{% endfor %}
             </div>
           {% endif %}
+          {% for service in agent.services %}{% if service.list_price %}
+            <p class="meta">{{ service.name }} · from {{ service.list_price }} {{ service.currency }}</p>
+          {% endif %}{% endfor %}
           <div class="agent-card-foot">
             <span class="meta">{{ agent.services|length }} listed services</span>
             <span class="meta">{{ agent.slug }}</span>

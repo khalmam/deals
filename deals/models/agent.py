@@ -22,6 +22,7 @@ class AgentProfile(models.Model):
     description = models.TextField(max_length=1000, blank=True)
     endpoint_url = models.URLField(max_length=500, blank=True)
     protocol = models.CharField(max_length=12, default="DEALS")
+    hosted = models.BooleanField(default=False)  # True: Deals runs this agent for its owner
     capabilities = models.JSONField(default=list, blank=True)
     services = models.JSONField(default=list, blank=True)
     mandate = models.JSONField(default=dict, blank=True)

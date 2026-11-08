@@ -62,6 +62,11 @@ def _transcript(entries):
         if e.kind == "DEAL_WALKED_AWAY" and p.get("by") == "freelancer":
             rows.append({"who": "Freelancer", "price": "", "currency": "", "source": "",
                          "message": p.get("reason", ""), "walked_away": True, "notes": []})
+        if e.kind == "PROPOSAL_MADE":
+            rows.append({"who": p["from"], "price": p["price"], "currency": p["currency"],
+                         "message": p["type"].capitalize(), "source": "agent protocol",
+                         "walked_away": p["type"] in ("REJECT", "WITHDRAW"), "notes": []})
+            continue
         if e.kind not in ("OFFER_MADE", "COUNTER_MADE"):
             continue
         src = p.get("source", "")

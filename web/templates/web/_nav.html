@@ -2,6 +2,7 @@
   <a class="brand" href="{% url 'home' %}">Deals</a>
   <ul>
     <li><a href="{% url 'start' %}"{% if active == 'start' %} aria-current="page"{% endif %}>Start a deal</a></li>
+    <li><a href="{% url 'negotiate' %}"{% if active == 'negotiate' %} aria-current="page"{% endif %}>Negotiate</a></li>
     <li><a href="{% url 'deals' %}"{% if active == 'deals' %} aria-current="page"{% endif %}>Deals</a></li>
     <li><a href="{% url 'agents' %}"{% if active == 'agents' %} aria-current="page"{% endif %}>Agent network</a></li>
     <li><a href="{% url 'activity' %}"{% if active == 'activity' %} aria-current="page"{% endif %}>PayPal activity</a></li>

@@ -5,11 +5,12 @@ from functools import wraps
 
 from agents.intent import read_intent
 from deals.domain.mandate import MandateViolation
-from deals.domain.money import MoneyError
+from deals.domain.money import Money, MoneyError
 from deals.domain.states import IllegalTransition
-from deals.models import Deal
+from deals.models import Deal, Negotiation
 
 from .agent_act import URLS
+from .agent_deals import AgentDealError, check_budget
 from .agent_run import agent_run
 from .confirm_hold import TermsMismatch, confirm_hold
 from .deal_view import DealNotFound
@@ -22,7 +23,7 @@ from .send_payouts import PayoutsAlreadySent
 
 HINT = "Name a price you would pay, accept the current ask, or say you are walking away."
 ERRORS = (IllegalTransition, MandateViolation, TermsMismatch, PayoutsAlreadySent,
-          NegotiationClosed, MoneyError)
+          NegotiationClosed, MoneyError, AgentDealError)
 
 
 class LiveError(Exception):
@@ -68,11 +69,16 @@ def start_deal(deps, title="Brand identity", client_email="buyer@personal.exampl
 @_guarded
 def say(deps, deal_id, text, urls=URLS, now=None):
     deal = _deal(deal_id)
+    if Negotiation.objects.filter(pk=deal.pk).exists():
+        raise AgentDealError("this deal negotiates through /api/negotiations", 409)
     ask = current_ask(deal)
     label = f"{ask.amount} {ask.currency}" if ask else ""
     intent = read_intent(deps.llm, deps.guard, str(deal.pk), text, label)
     if intent.action == "UNCLEAR":
         return {"status": "UNCLEAR", "message": HINT}
+    if ask and intent.action in ("OFFER", "ACCEPT"):
+        offer = ask if intent.action == "ACCEPT" else Money.of(intent.price, ask.currency)
+        check_budget(deal, offer)
     out = play_round(deal, deps.card, deps.bundle_id, deps.freelancer, intent.action,
                      intent.price, text, now=now)
     if out.status == "AGREED":
@@ -120,3 +126,16 @@ def cancel(deps, deal_id, now=None):
 def refresh(deps, deal_id, now=None):
     deal = _deal(deal_id)
     return {"changed": refresh_payouts(deal, deps.payments, now), "state": deal.state}
+
+
+@_guarded
+def settle_agreement(deps, deal_id, urls=URLS, now=None):
+    """After a negotiation ends AGREED: record the provider's mandate and let the agent open
+    the PayPal hold. Safe to call twice; it acts only while the deal is still AGREED."""
+    deal = _deal(deal_id)
+    if deal.state != "AGREED":
+        return {"state": deal.state}
+    if not deal.mandate:
+        set_mandate(deal, deps.mandate, now)
+    agent_run(deal, deps.payments, deps.actor, urls=urls, now=now)
+    return {"state": deal.state}

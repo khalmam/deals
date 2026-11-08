@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import live_views, views
+from . import live_views, negotiation_api, ui_negotiate, views
 
 urlpatterns = [
     path("", views.home, name="home"),
@@ -9,10 +9,18 @@ urlpatterns = [
     path("agents/", live_views.agent_directory, name="agents"),
     path("api/agents", live_views.api_agents, name="api_agents"),
     path("api/agents/me", live_views.api_agent_me, name="api_agent_me"),
+    path("api/negotiations", negotiation_api.api_negotiations, name="api_negotiations"),
+    path("api/negotiations/<uuid:negotiation_id>", negotiation_api.api_negotiation,
+         name="api_negotiation"),
+    path("api/negotiations/<uuid:negotiation_id>/messages",
+         negotiation_api.api_negotiation_messages, name="api_negotiation_messages"),
+    path("api/agents/<slug:slug>", live_views.api_agent_detail, name="api_agent_detail"),
     path("health", views.health),
     path("deals/<uuid:deal_id>/", views.deal_page, name="deal"),
     path("deals/<uuid:deal_id>/receipt/", views.receipt_page, name="receipt"),
     path("start/", live_views.start_page, name="start"),
+    path("negotiate/", ui_negotiate.negotiate_page, name="negotiate"),
+    path("api/ui/negotiate", ui_negotiate.api_ui_negotiate, name="api_ui_negotiate"),
     path("api/deals", live_views.api_create),
     path("api/deals/<uuid:deal_id>", live_views.api_get),
     path("api/deals/<uuid:deal_id>/offers", live_views.api_say),
