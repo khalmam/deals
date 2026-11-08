@@ -12,6 +12,7 @@ from deals.services.negotiation_views import refresh_view
 from deals.services.ui_negotiation import run_for_visitor
 
 from .negotiation_api import after_for
+from .ratelimit import limited
 
 
 def negotiate_page(request):
@@ -22,6 +23,7 @@ def negotiate_page(request):
 
 @csrf_exempt
 @require_POST
+@limited
 def api_ui_negotiate(request):
     try:
         body = json.loads(request.body or b"{}")

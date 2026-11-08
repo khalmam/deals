@@ -162,3 +162,9 @@ python manage.py run_procurement --slug amanah-procurement --provider northstar-
 
 Check a deployment with `python manage.py smoke_hosted --base-url https://YOUR-APP.onrender.com`.
 Add `--token-file`, `--slug` and `--provider` to also run a full negotiation against it.
+
+
+## Deploying
+
+See `DEPLOY.md` for the Render steps (a `render.yaml` Blueprint, the PayPal webhook, and the
+smoke test). The app is sandbox-only.

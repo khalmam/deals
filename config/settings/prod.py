@@ -4,7 +4,10 @@ from .base import *  # noqa: F403
 
 DEBUG = False
 SECRET_KEY = env("SECRET_KEY", required=True)
-ALLOWED_HOSTS = env_list("ALLOWED_HOSTS") or env("ALLOWED_HOSTS", required=True)
+# Render names the service's own host in RENDER_EXTERNAL_HOSTNAME, so it is allowed automatically.
+ALLOWED_HOSTS = env_list("ALLOWED_HOSTS") + env_list("RENDER_EXTERNAL_HOSTNAME")
+if not ALLOWED_HOSTS:
+    env("ALLOWED_HOSTS", required=True)  # raises a clear ConfigError
 DATABASES = {"default": parse_database_url(env("DATABASE_URL", required=True))}
 PAYPAL_CLIENT_ID = env("PAYPAL_CLIENT_ID", required=True)
 PAYPAL_CLIENT_SECRET = env("PAYPAL_CLIENT_SECRET", required=True)

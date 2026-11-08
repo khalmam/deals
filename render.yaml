@@ -1,0 +1,39 @@
+# Render Blueprint. Secrets are never written here: sync:false means you enter them in the
+# dashboard. See DEPLOY.md for the order of steps.
+databases:
+  - name: deals-db
+    plan: free              # free Postgres expires after 30 days; see DEPLOY.md
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: deals
+    runtime: python
+    plan: free
+    healthCheckPath: /healthz
+    buildCommand: pip install -r requirements.txt
+    # Migrations run at start (pre-deploy commands are not for free instances), then the demo
+    # provider is created if missing, then the server starts.
+    startCommand: >-
+      python manage.py migrate --noinput &&
+      (python manage.py seed_demo || true) &&
+      uvicorn config.asgi:application --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.prod
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: deals-db
+          property: connectionString
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: DEMO_SUB_EMAIL
+        sync: false

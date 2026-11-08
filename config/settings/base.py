@@ -15,4 +15,8 @@ USE_TZ = True
 TIME_ZONE = "UTC"
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+# The public demo endpoint creates agents and PayPal holds, so it is rate limited.
+UI_NEGOTIATE_WINDOW_SECONDS = 600
+UI_NEGOTIATE_PER_CLIENT = 12
+UI_NEGOTIATE_OVERALL = 120
 PAYPAL_BASE_URL = "https://api-m.sandbox.paypal.com"  # sandbox only for this project

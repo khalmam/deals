@@ -1,8 +1,9 @@
 from django.urls import path
 
-from . import live_views, negotiation_api, ui_negotiate, views
+from . import health, live_views, negotiation_api, ui_negotiate, views
 
 urlpatterns = [
+    path("healthz", health.healthz, name="healthz"),
     path("", views.home, name="home"),
     path("deals/", views.deal_list, name="deals"),
     path("activity/", views.activity, name="activity"),

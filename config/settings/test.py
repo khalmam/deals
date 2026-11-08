@@ -13,3 +13,4 @@ LLM_PROVIDER = "anthropic"
 AWS_REGION = "us-east-1"
 BEDROCK_MODEL_ID = "test-model"
 DEMO_SUB_EMAIL = "sub@example.com"
+UI_NEGOTIATE_PER_CLIENT = UI_NEGOTIATE_OVERALL = 10_000  # the limiter has its own tests
