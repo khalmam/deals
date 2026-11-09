@@ -3,6 +3,7 @@ returns plain data. Collaborators come in as Deps, so tests can pass fakes."""
 from dataclasses import dataclass
 from functools import wraps
 
+from agents.chat import chat_reply
 from agents.intent import read_intent
 from deals.domain.mandate import MandateViolation
 from deals.domain.money import Money, MoneyError
@@ -76,7 +77,9 @@ def say(deps, deal_id, text, urls=URLS, now=None):
     label = f"{ask.amount} {ask.currency}" if ask else ""
     intent = read_intent(deps.llm, deps.guard, str(deal.pk), text, label)
     if intent.action == "UNCLEAR":
-        return {"status": "UNCLEAR", "message": HINT}
+        reply = (chat_reply(deps.llm, deps.guard, str(deal.pk), text, label)
+                 if intent.source == "model" else None)
+        return {"status": "UNCLEAR", "message": reply or HINT}
     if ask and intent.action in ("OFFER", "ACCEPT"):
         offer = ask if intent.action == "ACCEPT" else Money.of(intent.price, ask.currency)
         check_budget(deal, offer)
