@@ -1,4 +1,3 @@
-.env
 *.pyc
 __pycache__/
 .venv/
@@ -8,4 +7,12 @@ db.sqlite3
 spike/results/
 venv/
 public/
-.vscode/
+
+.agents/
+.github/agents/
+.github/hooks/
+.github/skills/
+skills-lock.json
+venv/
+config.bat
+node_modules

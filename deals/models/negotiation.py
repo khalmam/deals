@@ -2,6 +2,8 @@ import uuid
 
 from django.db import models
 
+from deals.domain.negotiation_machine import MESSAGE_TYPES, STATUSES, Status
+
 from .agent import AgentProfile
 from .deal import Deal
 
@@ -11,7 +13,8 @@ class Negotiation(models.Model):
 
     deal = models.OneToOneField(Deal, primary_key=True, on_delete=models.PROTECT,
                                 related_name="negotiation")
-    status = models.CharField(max_length=10, default="OPEN")
+    status = models.CharField(max_length=10, default=Status.OPEN.value,
+                              choices=[(v, v) for v in STATUSES])
     head_version = models.PositiveIntegerField(default=0)
     head_proposal_id = models.UUIDField(null=True, blank=True)
     closed_at = models.CharField(max_length=40, blank=True)
@@ -24,7 +27,7 @@ class NegotiationMessage(models.Model):
     negotiation = models.ForeignKey(Negotiation, on_delete=models.PROTECT,
                                     related_name="messages")
     version = models.PositiveIntegerField()
-    msg_type = models.CharField(max_length=10)
+    msg_type = models.CharField(max_length=10, choices=[(v, v) for v in MESSAGE_TYPES])
     in_reply_to = models.UUIDField(null=True, blank=True)
     sender = models.ForeignKey(AgentProfile, on_delete=models.PROTECT, related_name="+")
     terms = models.JSONField(default=dict, blank=True)  # empty unless PROPOSE or COUNTER

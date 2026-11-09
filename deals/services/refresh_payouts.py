@@ -1,10 +1,7 @@
+from deals.domain.payout import NOT_YET, normalise
 from deals.models import PaymentRecord
 
 from .apply_webhook import record_item_status
-
-# PayPal's batch lookup and its webhooks name the same outcomes differently.
-LOOKUP_TO_EVENT = {"SUCCESS": "SUCCEEDED"}
-STILL_WAITING = {"PENDING", "PROCESSING"}
 
 
 def refresh_payouts(deal, payments, now=None):
@@ -15,11 +12,11 @@ def refresh_payouts(deal, payments, now=None):
         return 0
     changed = 0
     for payout_item_id, status, sender_item_id in payments.get_payout(batch.paypal_id).items:
-        if status in STILL_WAITING:
+        if status in NOT_YET:
             continue
         rec = PaymentRecord.objects.filter(deal=deal, kind="PAYOUT_ITEM",
                                            paypal_id=sender_item_id).first()
-        if rec and record_item_status(rec, LOOKUP_TO_EVENT.get(status, status),
+        if rec and record_item_status(rec, normalise(status),
                                       f"poll:{batch.paypal_id}", payout_item_id, now):
             changed += 1
     deal.refresh_from_db()
