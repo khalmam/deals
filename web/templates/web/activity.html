@@ -8,11 +8,11 @@
   <h2 id="h-events" class="rp-hide">Events</h2>
   {% if events %}
   <div class="card"><div class="scroll"><table>
-    <thead><tr><th scope="col">Received</th><th scope="col">Event</th><th scope="col">Resource</th><th scope="col">Applied</th></tr></thead>
+    <thead><tr><th scope="col">Received</th><th scope="col">Event</th><th scope="col">Resource</th><th scope="col">Outcome</th></tr></thead>
     <tbody>
     {% for e in events %}
       <tr><td>{{ e.received }}</td><td>{{ e.type }}</td><td><code>{{ e.resource|default:"none" }}</code></td>
-        <td class="{% if e.applied %}done-text{% endif %}">{% if e.applied %}Applied{% else %}Recorded{% endif %}</td></tr>
+        <td class="{% if e.applied %}done-text{% endif %}">{{ e.status_label }}</td></tr>
     {% endfor %}
     </tbody>
   </table></div></div>

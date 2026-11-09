@@ -15,6 +15,7 @@ from .agent_run import agent_run
 from .confirm_hold import TermsMismatch, confirm_hold
 from .deal_view import DealNotFound
 from .delivery_capture_void import confirm_delivery, void
+from .ledger import append
 from .mandate import set_mandate
 from .negotiate_round import NegotiationClosed, current_ask, play_round, start_negotiation
 from .open_deal import open_deal
@@ -99,7 +100,12 @@ def advance(deps, deal_id, urls=URLS, now=None):
 def approve_return(deps, deal_id, now=None):
     """PayPal sent the buyer back after approving: authorize and check the terms hash."""
     deal = _deal(deal_id)
-    confirm_hold(deal, deps.payments, now)
+    try:
+        confirm_hold(deal, deps.payments, now)
+    except TermsMismatch as exc:  # PayPal's hold was released; leave a trace, not a silent page
+        append(deal, "AGENT_ACTION", {"tool": "confirm_hold", "ok": False, "source": "system",
+                                      "error": str(exc)[:200]}, now)
+        raise
     return {"state": deal.state}
 
 

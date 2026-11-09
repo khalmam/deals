@@ -1,8 +1,10 @@
 """Read side of the negotiation protocol: how a negotiation looks to its parties."""
 from django.db.models import Q
 
+from deals.domain.negotiation_machine import BUYER, PROVIDER, is_open, legal_moves, other_role, turn
 from deals.models import Negotiation, NegotiationMessage
 
+from .common import utc_now
 from .negotiation_rules import NegotiationError
 
 
@@ -19,10 +21,22 @@ def _view_msg(m):
             "prev_hash": m.prev_hash, "expires_at": m.expires_at, "created_at": m.created_at}
 
 
+def _lapsed(status, head):
+    """OPEN, but the standing proposal's expiry has passed. Nothing closes a negotiation until
+    someone next writes to it, so a reader would otherwise see OPEN for a dead proposal."""
+    return bool(head and is_open(status) and head["expires_at"] and head["expires_at"] < utc_now())
+
+
+def _head_role(neg, head):
+    return BUYER if head and head["from"] == neg.deal.buyer.slug else PROVIDER
+
+
 def negotiation_view(neg, created=None, replayed=False):
     neg = Negotiation.objects.select_related("deal__buyer", "deal__provider").get(pk=neg.pk)
     msgs = [_view_msg(m) for m in neg.messages.select_related("sender").order_by("version")]
+    head = msgs[-1] if msgs else None
     return {"negotiation_id": str(neg.pk), "status": neg.status, "deal_state": neg.deal.state,
+            "turn": turn(neg.status, _head_role(neg, head)), "lapsed": _lapsed(neg.status, head),
             "buyer": neg.deal.buyer.slug, "provider": neg.deal.provider.slug,
             "deal_url": f"/deals/{neg.pk}/", "head": msgs[-1] if msgs else None,
             "standing_terms": next((m["terms"] for m in reversed(msgs) if m["terms"]), {}),
@@ -36,9 +50,14 @@ def list_negotiations(agent, limit=50):
             "deal__buyer", "deal__provider").order_by("-deal__created_at")[:limit]:
         head = _view_msg(NegotiationMessage.objects.select_related("sender").get(
             pk=neg.head_proposal_id))
+        role, head_role, lapsed = role_of(neg, agent), _head_role(neg, head), _lapsed(
+            neg.status, head)
         out.append({"negotiation_id": str(neg.pk), "status": neg.status,
-                    "role": role_of(neg, agent), "buyer": neg.deal.buyer.slug,
-                    "provider": neg.deal.provider.slug, "head": head})
+                    "role": role, "buyer": neg.deal.buyer.slug,
+                    "provider": neg.deal.provider.slug, "head": head,
+                    "turn": turn(neg.status, head_role), "lapsed": lapsed,
+                    "your_move": turn(neg.status, head_role) == role and not lapsed,
+                    "can_send": list(legal_moves(neg.status, head_role, role, lapsed))})
     return out
 
 
@@ -54,6 +73,10 @@ def party_view(agent, negotiation_id):
         pk=negotiation_id).first()
     if neg is None:
         raise NegotiationError("NOT_FOUND", "no such negotiation", 404)
-    if role_of(neg, agent) is None:
+    role = role_of(neg, agent)
+    if role is None:
         raise NegotiationError("FORBIDDEN", "you are not a party to this negotiation", 403)
-    return negotiation_view(neg)
+    view = negotiation_view(neg)
+    head_role = other_role(view["turn"]) if view["turn"] else role  # closed: nothing is legal
+    return {**view, "you": role, "your_move": view["turn"] == role and not view["lapsed"],
+            "can_send": list(legal_moves(view["status"], head_role, role, view["lapsed"]))}

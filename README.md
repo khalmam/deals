@@ -35,6 +35,12 @@ Rules decide, the AI proposes. Inner layers never import outer ones.
 Also enforced: no file over 200 lines, every Python folder has `__init__.py`, no floats in money
 code, environment variables read only in `config/env.py`.
 
+## State machines
+Every lifecycle (deal, negotiation, turn-taking, deal stage, payout items, webhook outcome) is a
+table in `deals/domain/`, read by the services, the pages, the JSON API and the agents. See
+`docs/STATE_MACHINES.md` for diagrams, the new agent-facing fields and known gaps. After editing
+a table, run `python manage.py machines --write docs/STATE_MACHINES.md`.
+
 ## Run
 ```
 cp .env.example .env      # fill in sandbox credentials
