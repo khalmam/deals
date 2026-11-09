@@ -13,6 +13,7 @@ from deals.models import Deal, Negotiation
 from .agent_act import URLS
 from .agent_deals import AgentDealError, check_budget
 from .agent_run import agent_run
+from .chat_log import record_chat
 from .confirm_hold import TermsMismatch, confirm_hold
 from .deal_view import DealNotFound
 from .delivery_capture_void import confirm_delivery, void
@@ -79,7 +80,9 @@ def say(deps, deal_id, text, urls=URLS, now=None):
     if intent.action == "UNCLEAR":
         reply = (chat_reply(deps.llm, deps.guard, str(deal.pk), text, label)
                  if intent.source == "model" else None)
-        return {"status": "UNCLEAR", "message": reply or HINT}
+        if reply:
+            record_chat(deal, text, reply)
+        return {"status": "UNCLEAR", "message": reply or HINT, "chat": bool(reply)}
     if ask and intent.action in ("OFFER", "ACCEPT"):
         offer = ask if intent.action == "ACCEPT" else Money.of(intent.price, ask.currency)
         check_budget(deal, offer)

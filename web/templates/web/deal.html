@@ -35,7 +35,7 @@
   {% if deal.transcript %}
   <ol class="talk">
   {% for m in deal.transcript %}
-    <li class="{% if m.who == 'Client' %}client{% else %}freelancer{% endif %}">
+    <li class="{% if m.who == 'Client' %}client{% else %}freelancer{% endif %}{% if m.chat %} chat{% endif %}">
       <p class="who">{{ m.who }}{% if m.walked_away %} walked away{% endif %}</p>
       {% if m.price %}<p class="price num">{{ m.price }} <small>{{ m.currency }}</small></p>{% endif %}
       {% if m.message %}<p class="said">{{ m.message }}</p>{% endif %}

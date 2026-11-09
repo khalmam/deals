@@ -4,6 +4,7 @@ from deals.domain.payout import summarise
 from deals.domain.stage import stage_for
 from deals.models import Deal, Negotiation
 
+from .chat_log import merge_chat
 from .deal_stage import ask_label, next_actions, standing_proposal
 from .ledger import verify_ledger
 
@@ -77,6 +78,13 @@ def _transcript(entries):
                      "message": p.get("message", ""), "walked_away": p.get("action") == "WALK_AWAY",
                      "source": SOURCES.get(src, src), "notes": list(p.get("notes", []))})
     return rows
+
+
+def _talk(deal, entries):
+    rows = []
+    for e in entries:  # tag each row with its entry's seq so chat can be slotted in
+        rows += [dict(r, seq=e.seq) for r in _transcript([e])]
+    return merge_chat(rows, deal)
 
 
 def _terms(deal):
@@ -164,7 +172,7 @@ def build_deal_view(deal_id, verify=False):
         "state_label": deal.state.replace("_", " ").capitalize(),
         "total": "" if deal.total_amount is None else str(deal.total_amount),
         "currency": deal.currency, "terms": _terms(deal),
-        "timeline": _timeline(entries), "transcript": _transcript(entries),
+        "timeline": _timeline(entries), "transcript": _talk(deal, entries),
         "actions": _actions(entries),
         "ledger": _ledger(entries, verified),
         "head_hash": entries[-1].hash if entries else "", "verified": verified,
