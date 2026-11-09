@@ -1,8 +1,10 @@
 """Read model for the deal page: one deal as plain dicts and strings, so the web layer never
 touches a model. Everything here comes from the deal row and its ledger."""
-from deals.models import Deal
+from deals.domain.payout import summarise
+from deals.domain.stage import stage_for
+from deals.models import Deal, Negotiation
 
-from .deal_stage import ask_label, stage_of
+from .deal_stage import ask_label, next_actions, standing_proposal
 from .ledger import verify_ledger
 
 TIMELINE = (
@@ -149,9 +151,13 @@ def build_deal_view(deal_id, verify=False):
         bad = verify_ledger(deal)
         verified = {"intact": bad is None, "broken_seq": None if bad is None else bad + 1,
                     "checked": len(entries)}
+    neg = Negotiation.objects.filter(pk=deal.pk).values_list("status", flat=True).first()
+    payouts = summarise(deal.payments.filter(kind="PAYOUT_ITEM").values_list("status", flat=True))
+    stage = stage_for(deal.state, neg, payouts["needs_attention"])
     return {
-        "stage": stage_of(deal, entries), "approve_url": deal.approve_url,
-        "ask": ask_label(entries),
+        "stage": stage.name, "waiting_on": stage.waiting_on, "next": next_actions(deal, stage),
+        "payouts": payouts, "standing": standing_proposal(entries),
+        "approve_url": deal.approve_url, "ask": ask_label(entries),
         "proof": _proof(entries),
         "id": str(deal.pk), "short_id": str(deal.pk)[:8], "title": deal.title,
         "client_email": deal.client_email, "state": deal.state,

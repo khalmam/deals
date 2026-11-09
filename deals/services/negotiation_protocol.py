@@ -6,7 +6,9 @@ import uuid
 from django.db import IntegrityError, transaction
 
 from deals.domain.chain import GENESIS
+from deals.domain.negotiation_machine import NEGOTIATION, Move, Status
 from deals.domain.proposal import (
+    MESSAGE_TYPES,
     WITH_TERMS,
     ProposalError,
     message_hash,
@@ -32,7 +34,8 @@ from .negotiation_rules import Head, NegotiationError, check_turn
 from .negotiation_views import negotiation_view, role_of
 from .open_deal import open_deal
 
-CLOSING = {"ACCEPT": "AGREED", "REJECT": "REJECTED", "WITHDRAW": "WITHDRAWN"}
+CLOSING = {m: NEGOTIATION.step(Status.OPEN, m).value
+           for m in (Move.ACCEPT, Move.REJECT, Move.WITHDRAW)}  # message type -> final status
 
 
 def _head(neg):
@@ -76,12 +79,14 @@ def _write(neg, sender, msg_type, in_reply_to, terms, shown, expires_at, key, rh
     return pid
 
 
-def _close(neg, status, by, now, reason):
+def _close(neg, closing, by, now, reason):
+    """End the negotiation with `closing` (ACCEPT, REJECT, WITHDRAW or EXPIRE)."""
+    status = NEGOTIATION.step(neg.status, closing).value  # refuses to close a closed negotiation
     neg.status, neg.closed_at = status, now
     neg.save()
     append(neg.deal, "NEGOTIATION_CLOSED", {"status": status, "by": by,
                                             "negotiation_id": str(neg.pk)}, now)
-    if status != "AGREED":
+    if status != Status.AGREED:
         move(neg.deal, Event.WALK_AWAY)
         neg.deal.save()
         append(neg.deal, "DEAL_WALKED_AWAY", {"by": by, "reason": reason}, now)
@@ -92,8 +97,8 @@ def _expire_if_due(neg_id, now):
         neg = Negotiation.objects.select_for_update(of=("self",)).select_related(
             "deal__buyer", "deal__provider").get(pk=neg_id)
         head = NegotiationMessage.objects.get(pk=neg.head_proposal_id)
-        if neg.status == "OPEN" and head.expires_at and head.expires_at < now:
-            _close(neg, "EXPIRED", "system", now, "the standing proposal expired")
+        if neg.status == Status.OPEN and head.expires_at and head.expires_at < now:
+            _close(neg, Move.EXPIRE, "system", now, "the standing proposal expired")
             return True
     return False
 
@@ -148,7 +153,7 @@ def submit_message(agent, negotiation_id, body, key, now=None):
     if role is None:
         raise NegotiationError("FORBIDDEN", "you are not a party to this negotiation", 403)
     msg_type = body.get("type")
-    if msg_type not in ("COUNTER", "ACCEPT", "REJECT", "WITHDRAW", "PROPOSE"):
+    if msg_type not in MESSAGE_TYPES:
         raise ProposalError("type must be COUNTER, ACCEPT, REJECT or WITHDRAW", "INVALID_TYPE")
     terms = parse_terms(body["terms"]) if "terms" in body else None
     seconds = expiry_seconds(body, msg_type)
@@ -180,7 +185,7 @@ def submit_message(agent, negotiation_id, body, key, now=None):
             if msg_type in CLOSING:
                 if msg_type == "ACCEPT":
                     agree_proposal(neg, head_msg.terms, head_msg.proposal_id, now)
-                _close(neg, CLOSING[msg_type], agent.slug, now, f"{agent.slug} said {msg_type}")
+                _close(neg, msg_type, agent.slug, now, f"{agent.slug} said {msg_type}")
     except IntegrityError:
         if (done := _replay(agent, key, rhash)):
             return done

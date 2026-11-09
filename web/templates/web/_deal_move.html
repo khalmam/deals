@@ -6,6 +6,9 @@
     <input name="message" maxlength="500" placeholder="Type your reply" aria-label="Your reply to the freelancer" required>
     <button type="submit">Send</button>
   </form>
+  {% elif deal.stage == 'agent_negotiating' %}
+  <h2 id="h-move">Agents are negotiating</h2>
+  <p class="lede">The buyer’s agent and the provider’s agent are exchanging proposals through the negotiation protocol.{% if deal.standing %} The standing proposal is <strong class="num">{{ deal.standing.price }} {{ deal.standing.currency }}</strong> from {{ deal.standing.by }}.{% endif %} This page updates as they answer. There is nothing for you to do yet.</p>
   {% elif deal.stage == 'agreed' %}
   <h2 id="h-move">Next step</h2>
   <p class="lede">The terms are agreed. The agent has not opened the PayPal hold yet.</p>
@@ -30,9 +33,20 @@
   <p class="lede">The payment is captured and the payouts are sent. PayPal confirms each payout, and this page updates when it does.</p>
   <span data-autorefresh hidden></span>
   <div class="row-actions"><button class="ghost" data-post="/refresh">Refresh from PayPal</button></div>
+  {% elif deal.stage == 'payout_issue' %}
+  <h2 id="h-move">A payout needs attention</h2>
+  <p class="lede">The payment is captured, but PayPal reports a problem with {{ deal.payouts.failed }} of {{ deal.payouts.total }} payout{{ deal.payouts.total|pluralize }}. The money has not reached every sub-contractor. This page has stopped polling; check the PayPal activity page, then refresh.</p>
+  <div class="row-actions"><button class="ghost" data-post="/refresh">Refresh from PayPal</button><a class="button ghost" href="{% url 'activity' %}">PayPal activity</a></div>
   {% elif deal.stage == 'paid' %}
   <h2 id="h-move">Paid out</h2>
   <p class="lede">The money moved, the sub-contractor was paid, and every step is in the ledger.</p>
+  <div class="row-actions"><a class="button ghost" href="{% url 'receipt' deal.id %}">Sealed receipt</a><a class="button" href="{% url 'start' %}">Start another deal</a></div>
+  {% elif deal.stage == 'invoiced' %}
+  <h2 id="h-move">Invoice sent</h2>
+  <p class="lede">An invoice for the balance is out. The deal closes when the client pays it.</p>
+  {% elif deal.stage == 'closed' %}
+  <h2 id="h-move">Deal closed</h2>
+  <p class="lede">Every step is finished and recorded in the ledger.</p>
   <div class="row-actions"><a class="button ghost" href="{% url 'receipt' deal.id %}">Sealed receipt</a><a class="button" href="{% url 'start' %}">Start another deal</a></div>
   {% elif deal.stage == 'voided' %}
   <h2 id="h-move">Hold voided</h2>

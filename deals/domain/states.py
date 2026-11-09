@@ -1,6 +1,11 @@
 """Deal state machine. Every money action is a transition; illegal ones raise."""
 from enum import Enum
 
+from .machine import IllegalTransition, Machine
+
+__all__ = ["DEAL", "TRANSITIONS", "Event", "IllegalTransition", "State", "allowed_events",
+           "transition"]
+
 
 class State(str, Enum):
     DRAFT = "DRAFT"
@@ -53,17 +58,13 @@ TRANSITIONS = {
 }
 
 
-class IllegalTransition(Exception):
-    pass
+DEAL = Machine("deal", State, Event, TRANSITIONS, State.DRAFT)
 
 
 def transition(state, event):
-    try:
-        return TRANSITIONS[(State(state), Event(event))]
-    except KeyError:
-        raise IllegalTransition(f"{event} is not allowed in state {state}") from None
+    return DEAL.step(state, event)
 
 
 def allowed_events(state):
     """What may happen next. The agent's tool menu is built from this."""
-    return sorted(e.value for (s, e) in TRANSITIONS if s == State(state))
+    return DEAL.allowed(state)

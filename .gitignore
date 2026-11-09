@@ -9,3 +9,10 @@ spike/results/
 venv/
 public/
 .vscode/
+
+.agents/
+.github/agents/
+.github/hooks/
+.github/skills/
+skills-lock.json
+venv/

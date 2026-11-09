@@ -6,8 +6,8 @@ import re
 import unicodedata
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
-MESSAGE_TYPES = ("PROPOSE", "COUNTER", "ACCEPT", "REJECT", "WITHDRAW")
-STATUSES = ("OPEN", "AGREED", "REJECTED", "WITHDRAWN", "EXPIRED")
+from .negotiation_machine import MESSAGE_TYPES, STATUSES  # noqa: F401  (re-exported)
+
 WITH_TERMS = ("PROPOSE", "COUNTER")
 CENT = Decimal("0.01")
 TERMS_TAG = "deals.terms.v1\n"  # separates these hashes from every other hash we make
