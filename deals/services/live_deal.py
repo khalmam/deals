@@ -13,7 +13,7 @@ from deals.models import Deal, Negotiation
 from .agent_act import URLS
 from .agent_deals import AgentDealError, check_budget
 from .agent_run import agent_run
-from .chat_log import record_chat
+from .chat_log import recent_turns, record_chat
 from .confirm_hold import TermsMismatch, confirm_hold
 from .deal_view import DealNotFound
 from .delivery_capture_void import confirm_delivery, void
@@ -76,9 +76,11 @@ def say(deps, deal_id, text, urls=URLS, now=None):
         raise AgentDealError("this deal negotiates through /api/negotiations", 409)
     ask = current_ask(deal)
     label = f"{ask.amount} {ask.currency}" if ask else ""
-    intent = read_intent(deps.llm, deps.guard, str(deal.pk), text, label)
+    history = recent_turns(deal)
+    intent = read_intent(deps.llm, deps.guard, str(deal.pk), text, label,
+                         history)
     if intent.action == "UNCLEAR":
-        reply = (chat_reply(deps.llm, deps.guard, str(deal.pk), text, label)
+        reply = (chat_reply(deps.llm, deps.guard, str(deal.pk), text, label, history)
                  if intent.source == "model" else None)
         if reply:
             record_chat(deal, text, reply)

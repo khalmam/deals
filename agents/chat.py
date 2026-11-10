@@ -35,11 +35,14 @@ def _allowed(ask):
         return set()
 
 
-def chat_reply(llm, guard, deal_ref, text, ask=""):
+def chat_reply(llm, guard, deal_ref, text, ask="", history=""):
     """A short reply, or None when the model is unavailable or says something it must not."""
     try:
         guard.check_and_count(deal_ref)
         system = SYSTEM + (f" The current ask is {ask}." if ask else "")
+        if history:
+            system += (" Conversation so far:\n" + history + "\nDo not repeat a question "
+                       "already asked above; answer what the client just said.")
         reply = llm.complete(system, [{"role": "user", "content": text}])
     except Exception:  # model down, over budget, odd reply: the hint is the fallback
         return None

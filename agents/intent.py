@@ -50,10 +50,14 @@ def read_by_rules(text):
     return Intent("UNCLEAR", None, "rules")
 
 
-def read_intent(llm, guard, deal_ref, text, ask=""):
+def read_intent(llm, guard, deal_ref, text, ask="", history=""):
     try:
         guard.check_and_count(deal_ref)
         system = SYSTEM + f" The seller's current ask is {ask}." if ask else SYSTEM
+        if history:
+            system += (" Conversation so far:\n" + history + "\nRead the message in that "
+                       "context: if the seller just asked whether to go ahead at the current "
+                       "ask, a plain yes or I am ready is ACCEPT and a plain no is WALK_AWAY.")
         raw = llm.complete(system, [{"role": "user", "content": text}])
         data = json.loads(raw[raw.index("{"):raw.rindex("}") + 1])
         action = data["action"]
