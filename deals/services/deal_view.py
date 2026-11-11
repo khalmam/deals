@@ -3,6 +3,9 @@ touches a model. Everything here comes from the deal row and its ledger."""
 from deals.domain.payout import summarise
 from deals.domain.stage import stage_for
 from deals.models import Deal, Negotiation
+from deals.domain.payout import summarise
+from deals.domain.stage import stage_for
+from deals.models import Deal, Negotiation
 
 from .chat_log import merge_chat
 from .deal_stage import ask_label, next_actions, standing_proposal
@@ -159,6 +162,9 @@ def build_deal_view(deal_id, verify=False):
         bad = verify_ledger(deal)
         verified = {"intact": bad is None, "broken_seq": None if bad is None else bad + 1,
                     "checked": len(entries)}
+    neg = Negotiation.objects.filter(pk=deal.pk).values_list("status", flat=True).first()
+    payouts = summarise(deal.payments.filter(kind="PAYOUT_ITEM").values_list("status", flat=True))
+    stage = stage_for(deal.state, neg, payouts["needs_attention"])
     neg = Negotiation.objects.filter(pk=deal.pk).values_list("status", flat=True).first()
     payouts = summarise(deal.payments.filter(kind="PAYOUT_ITEM").values_list("status", flat=True))
     stage = stage_for(deal.state, neg, payouts["needs_attention"])

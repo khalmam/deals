@@ -40,7 +40,11 @@
     api('/offers', { message: text }).then(function (res) {
       return refresh(true).then(function () {
         var d = res.data;
+<<<<<<< HEAD
         note(res.ok ? (d.status === 'UNCLEAR' && !d.chat ? d.message : '') : (d.error || 'Something went wrong.'));
+=======
+        note(res.ok ? (d.status === 'UNCLEAR' ? d.message : '') : (d.error || 'Something went wrong.'));
+>>>>>>> 4d27efd8476e6ca5adc36174a41ab1b59a4a97db
         btn.disabled = false; input.disabled = false;  // a failed request must not leave the form dead
         var i = document.querySelector('[data-say] input'); if (i) { i.focus(); }
       });
