@@ -95,27 +95,5 @@
 </section>
 </main>
 
-<aside id="ledger" class="seal" aria-labelledby="h-ledger">
-  <h2 id="h-ledger">Sealed record</h2>
-  <p class="pt-sub">Every entry is locked to the one before it. Updates live.</p>
-  <p class="noprint"><button type="button" class="ghost" onclick="location.reload()">Verify ledger</button></p>
-  {% if deal.verified %}
-  <div class="badge{% if not deal.verified.intact %} bad{% endif %}" role="status"><span class="dot"></span>
-    <span>{% if deal.verified.intact %}Intact. {{ deal.verified.checked }} entries verified.{% else %}Broken at entry {{ deal.verified.broken_seq }}. That entry or an earlier one was changed.{% endif %}</span></div>
-  {% endif %}
-  <ol class="thread">
-  {% for e in deal.ledger %}
-    <li class="row {{ e.state }}" style="--dot:{{ e.color }}">
-      <span class="line"></span><span class="node"></span>
-      <div class="body">
-        <div class="top"><span class="kind">{{ e.label }}</span><span class="by">{{ e.date }}</span></div>
-        {% if e.summary %}<div class="sum">{{ e.summary }}</div>{% endif %}
-        <div class="hash" title="{{ e.hash }}">seal {{ e.short_hash }}, {% if e.first %}first entry{% else %}follows {{ e.prev_short }}{% endif %}</div>
-      </div>
-    </li>
-  {% endfor %}
-  </ol>
-  {% if deal.head_hash %}<p class="meta">Head hash <code>{{ deal.head_hash }}</code></p>{% endif %}
-</aside>
 {% endblock %}
 {% block scripts %}{% include "web/_deal_live.html" %}{% endblock %}

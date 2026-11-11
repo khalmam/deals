@@ -117,7 +117,7 @@ def test_api_flow(client, deps):
     assert said.json()["status"] == "COUNTER" and said.json()["read_by"] == "rules"
     assert client.get(f"/api/deals/{deal_id}").json()["stage"] == "negotiating"
     page = client.get(f"/deals/{deal_id}/").content.decode()
-    assert "data-say" in page and "Sealed record" in page
+    assert "data-say" in page and "Sealed record" not in page
 
 
 def test_unclear_message_asks_again(client, deps):

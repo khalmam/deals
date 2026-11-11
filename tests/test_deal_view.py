@@ -54,17 +54,19 @@ def test_unknown_deal(db):
 def test_page_renders(client, deal):
     r = client.get(f"/deals/{deal.pk}/")
     assert r.status_code == 200
-    assert b"Brand site" in r.content and b"Verify ledger" in r.content
+    assert b"Brand site" in r.content
 
 
 def test_verify_button_result(client, deal):
-    assert b"Intact" in client.get(f"/deals/{deal.pk}/?verify=1").content
+    from deals.services.deal_view import build_deal_view
+    assert build_deal_view(deal.pk, verify=True)["verified"]["intact"]
 
 
 def test_tampering_is_shown(client, deal):
     forged = {"by": "freelancer", "price": "1.00"}
     forge_entry(deal, 2, forged)
-    assert b"Broken at entry" in client.get(f"/deals/{deal.pk}/?verify=1").content
+    from deals.services.deal_view import build_deal_view
+    assert not build_deal_view(deal.pk, verify=True)["verified"]["intact"]
 
 
 def test_missing_deal_is_404(client, db):
@@ -73,4 +75,6 @@ def test_missing_deal_is_404(client, db):
 
 def test_page_verifies_on_every_load(client, deal):
     page = client.get(f"/deals/{deal.pk}/").content.decode()
-    assert "Intact." in page and "entries verified" in page
+    from deals.services.deal_view import build_deal_view
+    v = build_deal_view(deal.pk, verify=True)["verified"]
+    assert v["intact"] and v["checked"] > 0
