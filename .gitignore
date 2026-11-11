@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 .env
 *.pyc
 __pycache__/
@@ -17,23 +16,3 @@ public/
 .github/skills/
 skills-lock.json
 venv/
-=======
-*.pyc
-__pycache__/
-.venv/
-.pytest_cache/
-.ruff_cache/
-db.sqlite3
-spike/results/
-venv/
-public/
-
-.agents/
-.github/agents/
-.github/hooks/
-.github/skills/
-skills-lock.json
-venv/
-config.bat
-node_modules
->>>>>>> 4d27efd8476e6ca5adc36174a41ab1b59a4a97db
