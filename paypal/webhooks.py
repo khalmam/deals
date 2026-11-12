@@ -19,7 +19,7 @@ def verify_signature(client: PayPalClient, headers, event, webhook_id):
         "webhook_id": webhook_id,
         "webhook_event": event,
     }
-    d = client.request("POST", "/v1/notification/webhooks/verify-webhook-signature", body)
+    d = client.request("POST", "/v1/notifications/verify-webhook-signature", body)
     status = d.get("verification_status")
     if status != "SUCCESS":
         # Say why a delivery was refused: what PayPal answered and which headers were missing.
