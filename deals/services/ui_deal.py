@@ -2,6 +2,7 @@
 buyer is registered for the visitor, as the buyer-agent page does, and the deal opens through
 start_agent_deal, the code agents use, so the chat runs against the provider's own rate card."""
 import secrets
+from decimal import Decimal
 
 from .agent_deals import AgentDealError, start_agent_deal
 from .agent_registry import discover_agents, get_agent, register_agent
@@ -17,6 +18,11 @@ def priced_providers():
     first. The rest are shown greyed out on the pick page."""
     found = [a for a in discover_agents(agent_type="PROVIDER")
              if any(s.get("list_price") for s in a["services"])]
+    for a in found:  # what the pick cards show: the lowest price and how many services
+        priced = [s for s in a["services"] if s.get("list_price")]
+        low = min(priced, key=lambda s: Decimal(str(s["list_price"])))
+        a["from_price"] = f"{Decimal(str(low['list_price'])):.0f}"
+        a["from_currency"], a["service_count"] = low.get("currency", ""), len(priced)
     return sorted(found, key=lambda a: (not a["hosted"], a["name"].lower()))
 
 

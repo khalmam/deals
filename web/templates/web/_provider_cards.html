@@ -3,15 +3,29 @@
 form[data-neg], form[data-start] { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; align-items: end; max-width: 100%; }
 form[data-neg] label, form[data-start] label { display: flex; flex-direction: column; gap: .35rem; }
 form[data-neg] button, form[data-start] button { justify-self: start; }
+form[data-start] { position: sticky; bottom: 0; z-index: 5; margin-top: 1rem; padding: 1rem 0; background: var(--bg, #f5f5f7); border-top: 1px solid rgba(0, 0, 0, .09); }
+.pick-selected { display: flex; flex-direction: column; gap: .15rem; }
 [data-detail] { display: none !important; }
-.pick-set { border: 0; padding: 0; margin: 1.5rem 0; min-width: 0; }
+.flow { display: flex; flex-wrap: wrap; gap: .5rem 1.75rem; list-style: none; padding: 0; margin: 1rem 0 0; color: var(--mute, #6e6e73); font-size: .95rem; }
+.flow b { display: inline-grid; place-items: center; width: 1.5rem; height: 1.5rem; margin-right: .5rem; border-radius: 50%; background: #1d1d1f; color: #fff; font-size: .8rem; }
+.pick-set { border: 0; padding: 0; margin: 1.75rem 0 1rem; min-width: 0; }
 .pick-set legend { font-weight: 600; margin-bottom: .75rem; padding: 0; }
-.pick { position: relative; cursor: pointer; border: 1px solid #d2d2d7; }
+.pick-set .agent-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.pick { position: relative; cursor: pointer; display: flex; flex-direction: column; border: 1px solid #d2d2d7; }
 .pick input { position: absolute; opacity: 0; pointer-events: none; }
 .pick.is-picked { border-color: #1d1d1f; box-shadow: 0 0 0 2px #1d1d1f; }
 .pick-off { opacity: .55; cursor: not-allowed; }
+.pick-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pick-foot { margin-top: auto; padding-top: .75rem; }
 .pick-note { font-size: .85rem; }
+.trust-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; list-style: none; padding: 0; margin: 2rem 0 0; color: var(--mute, #6e6e73); font-size: .9rem; }
+.trust-row li { border-top: 1px solid rgba(0, 0, 0, .09); padding-top: .75rem; }
 </style>
+<ol class="flow">
+  <li><b>1</b>Choose a provider</li>
+  <li><b>2</b>Negotiate the price</li>
+  <li><b>3</b>Approve and pay with PayPal</li>
+</ol>
 <fieldset class="pick-set" data-cards>
   <legend>Choose who you negotiate with</legend>
   <div class="agent-grid">
@@ -19,20 +33,19 @@ form[data-neg] button, form[data-start] button { justify-self: start; }
     <label class="card agent-card pick">
       <input type="radio" name="provider-card" value="">
       <div class="agent-card-top"><span class="agent-mark">S</span><span class="agent-status"><i></i> Demo</span></div>
-      <p class="meta">Built-in demo</p>
       <h3>Sample freelancer</h3>
-      <p class="agent-description">A brand-design freelancer with a built-in rate card. The quickest way to try the whole flow.</p>
+      <p class="agent-description pick-desc">A brand-design freelancer with a built-in rate card. The quickest way to try the whole flow.</p>
+      <p class="meta pick-foot">Built-in rate card</p>
     </label>
   {% endif %}
   {% for p in cards %}
     <label class="card agent-card pick{% if not p.hosted %} pick-off{% endif %}">
       <input type="radio" name="provider-card" value="{{ p.slug }}"{% if not p.hosted %} disabled{% endif %}>
       <div class="agent-card-top"><span class="agent-mark">{{ p.name|slice:":1"|upper }}</span>{% if p.hosted %}<span class="agent-status"><i></i> Available now</span>{% endif %}</div>
-      <p class="meta">Provider agent</p>
       <h3>{{ p.name }}</h3>
-      <p class="agent-description">{{ p.description|default:"This provider has not added a description yet." }}</p>
-      {% if p.capabilities %}<div class="agent-tags">{% for c in p.capabilities %}<span>{{ c }}</span>{% endfor %}</div>{% endif %}
-      {% for s in p.services %}{% if s.list_price %}<p class="meta">{{ s.name }} · from {{ s.list_price }} {{ s.currency }}</p>{% endif %}{% endfor %}
+      <p class="agent-description pick-desc">{{ p.description|default:"This provider has not added a description yet." }}</p>
+      {% if p.capabilities %}<div class="agent-tags">{% for c in p.capabilities|slice:":3" %}<span>{{ c }}</span>{% endfor %}</div>{% endif %}
+      <p class="meta pick-foot">From {{ p.from_price }} {{ p.from_currency }} · {{ p.service_count }} service{{ p.service_count|pluralize }}</p>
       {% if not p.hosted %}<p class="meta pick-note">Runs its own agent. Negotiate with it through the API.</p>{% endif %}
     </label>
   {% endfor %}
@@ -46,6 +59,10 @@ document.addEventListener('DOMContentLoaded', function () {
   function mark() {
     grid.querySelectorAll('.pick').forEach(function (c) {
       c.classList.toggle('is-picked', c.querySelector('input').checked);
+    });
+    var on = grid.querySelector('input:checked');
+    document.querySelectorAll('[data-selected]').forEach(function (el) {
+      el.textContent = on ? on.closest('.pick').querySelector('h3').textContent : '';
     });
   }
   var current = psel ? psel.value : '';

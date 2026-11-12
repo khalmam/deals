@@ -3,10 +3,11 @@
 {% block content %}
 <main>
   <h1>Negotiate with a provider’s agent</h1>
-  <p class="state">Choose a provider, set the most you will pay and the price you would be happy with. A buyer agent negotiates for you within those limits, using the same protocol any outside agent would. Then you approve the PayPal hold yourself.</p>
+  <p class="state">Set the most you will pay and the price you would be happy with. A buyer agent negotiates for you within those limits, using the same protocol any outside agent would. Then you approve the PayPal payment yourself.</p>
   {% if providers %}
   {% include "web/_provider_cards.html" %}
   <form class="say" data-neg>
+    <div class="pick-selected"><span class="meta">Selected</span><strong data-selected></strong></div>
     <label>Provider
       <select name="provider" data-provider>
         {% for p in providers %}<option value="{{ p.slug }}">{{ p.name }}</option>{% endfor %}

@@ -3,9 +3,10 @@
 {% block content %}
 <main>
   <h1>Start a deal</h1>
-  <p class="state">You play the client. Choose who you negotiate with, or keep the sample freelancer, whose agent opens with the Standard brand package at 1800.00 USD. Haggle in your own words, approve the hold in PayPal’s sandbox, confirm delivery, and watch the money move.</p>
+  <p class="state">Choose a provider, negotiate the price in your own words, then approve the payment with PayPal. AI agents do the haggling, Deals records every move, and PayPal handles the money.</p>
   {% include "web/_provider_cards.html" with sample=True %}
   <form class="say" data-start>
+    <div class="pick-selected"><span class="meta">Selected</span><strong data-selected></strong></div>
     {% if providers %}
     <label>Negotiate with
       <select name="provider" data-provider>
@@ -21,7 +22,11 @@
   <div class="card" data-detail style="display:none"></div>
   <p class="meta">Prefer to let a buyer agent do the haggling within your limits? <a href="{% url 'negotiate' %}">Negotiate with a provider’s agent</a>.</p>
   <p class="meta" data-note role="status"></p>
-  <p class="lede">The agent can never go below its floor. Whatever you type, the rules engine decides and every move goes in the sealed ledger.</p>
+  <ul class="trust-row">
+    <li>The provider’s agent never goes below its floor price.</li>
+    <li>Every move is recorded in a hash-linked ledger.</li>
+    <li>PayPal handles payment, and only after you confirm delivery.</li>
+  </ul>
 </main>
 {% endblock %}
 {% block scripts %}
