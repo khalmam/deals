@@ -1,11 +1,29 @@
 # Deals
 
-An agent negotiates a freelance deal with a client's agent, and PayPal handles everything after
+Two parties, or their AI agents, negotiate a deal, and PayPal handles everything after
 agreement: the payment hold, capture on confirmed delivery, payouts to sub-contractors, invoices,
 and webhook-driven status. Built for the PayPal AI Hackathon.
 
-**Status (Oct 29):** foundation only. The PayPal adapter and the domain core are done and tested;
-negotiation, ledger persistence, UI and deployment are in progress.
+**Status:** working sandbox prototype. Negotiation, PayPal hold/capture/void/refund, payouts,
+webhooks, the tamper-evident ledger, the web UI and a Render deployment are all implemented
+and covered by 383 tests.
+
+- **Live demo:** <YOUR RENDER URL> (the free instance sleeps; the first load can take a minute)
+- **Demo video:** <YOUR YOUTUBE URL>
+
+## What it does
+Two parties, or their AI agents, negotiate an agreement and back it with a PayPal payment.
+When both accept, the terms are sealed and fingerprinted, and that hash travels with the PayPal
+hold in `custom_id`. Funds are authorized, captured on confirmed delivery, and every webhook is
+signature-verified and stored once, so the payment trail cannot be forged or replayed.
+
+## Tools used
+| Tool | Used for |
+|---|---|
+| **PayPal Sandbox** (Orders AUTHORIZE, capture, void, refund; Payouts; Invoicing; Webhooks) | The payment hold, capture on delivery, sub-contractor payouts, invoices, verified status updates |
+| **Claude** (Anthropic API, or Amazon Bedrock when deployed) | The buyer and provider negotiating agents: counter-offers and message wording |
+| Rules engine (`engine/`) | Checks every offer against budget, private floor and protocol rules. The AI proposes, the rules decide. Without a model key it runs the negotiation alone. |
+| Django, PostgreSQL, Render | App, storage, hosting |
 
 ## How it works with PayPal
 - **Hold:** an Order with intent AUTHORIZE. The client approves on PayPal. Valid up to 29 days.
@@ -41,15 +59,38 @@ table in `deals/domain/`, read by the services, the pages, the JSON API and the 
 `docs/STATE_MACHINES.md` for diagrams, the new agent-facing fields and known gaps. After editing
 a table, run `python manage.py machines --write docs/STATE_MACHINES.md`.
 
-## Run
+## Run it yourself
+
+Requires Python 3.12. The fastest path uses SQLite and needs no accounts. The negotiation runs
+on the rules engine alone, and the PayPal steps need sandbox credentials (see below).
+
+```sh
+git clone <YOUR GITHUB URL> && cd deals-app
+pip install -r requirements-dev.txt
+export DJANGO_SETTINGS_MODULE=config.settings.dev
+export DATABASE_URL=sqlite:///db.sqlite3
+export DEMO_SUB_EMAIL=<sandbox personal account email>   # receives the demo payout
+python manage.py migrate
+python manage.py seed_demo          # creates the demo providers
+python manage.py runserver 8000
 ```
-cp .env.example .env      # fill in sandbox credentials
-set -a; source .env; set +a   # the app reads real environment variables, not the file;
-                              # run this in every terminal that starts the server
-make install
-make test
-make run
-```
+
+Open http://localhost:8000/negotiate/ and run a negotiation. Check `/healthz` answers `{"ok": true}`.
+Run the tests with `python -m pytest -q`.
+
+**Full flow with PayPal and Claude.** The app reads real environment variables, not a `.env` file,
+so run `cp .env.example .env`, fill it in, then `set -a; source .env; set +a` in every terminal.
+
+| Variable | Needed for |
+|---|---|
+| `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | Sandbox app credentials (PayPal developer dashboard) |
+| `PAYPAL_WEBHOOK_ID` | Webhook verification; webhooks need a public URL (the Render deployment) |
+| `ANTHROPIC_API_KEY` (or `LLM_PROVIDER=bedrock` with AWS credentials) | LLM-powered agents |
+| `DEMO_SUB_EMAIL` | Sandbox personal account that receives the sub-contractor payout |
+
+Then: open `/negotiate/`, run a negotiation, approve the hold with a sandbox buyer account,
+confirm delivery (capture and payout), and open the receipt to see the ledger check.
+Everything runs against the PayPal **sandbox**; no real money moves.
 
 ## Credits
 The tamper-evident hash chain is adapted from my earlier project, Paper Trail.
