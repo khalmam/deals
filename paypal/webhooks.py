@@ -35,7 +35,11 @@ class WebhookGateway:
         self._client, self._webhook_id = client, webhook_id
 
     def verify(self, headers, raw_event):
-        return verify_signature(self._client, headers, raw_event, self._webhook_id)
+        from .client import PayPalError
+        try:
+            return verify_signature(self._client, headers, raw_event, self._webhook_id)
+        except PayPalError:  # PayPal could not verify it: junk or foreign request
+            return False
 
     def parse(self, raw_event):
         return parse_event(raw_event)
