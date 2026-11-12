@@ -4,8 +4,9 @@ from deals.domain.mandate import Mandate, check_payouts
 from deals.domain.money import Money
 from deals.domain.ports import PayoutItem
 from deals.domain.states import Event, transition
-from deals.models import PaymentRecord
+from deals.models import Deal, PaymentRecord
 
+from .common import move
 from .ledger import append
 
 
@@ -42,3 +43,17 @@ def send_payouts(deal, payments, actor="agent", now=None):
                                      "items": [{"sub_id": s, "amount": str(a.amount)}
                                                for s, _, a in lines]}, now)
     return deal
+
+
+def settle_without_payouts(deal, now=None):
+    """A captured deal that owes no sub-contractor has nothing left to wait for, so it is
+    finished. Safe to call at any time: it acts only on a CAPTURED deal with no payouts."""
+    with transaction.atomic():
+        list(Deal.objects.select_for_update().filter(pk=deal.pk))
+        deal.refresh_from_db()
+        if deal.state != "CAPTURED" or (deal.terms or {}).get("payouts"):
+            return False
+        move(deal, Event.PAYOUT_DONE)
+        deal.save()
+        append(deal, "PAYOUT_SENT", {"batch_id": "", "actor": "system", "items": []}, now)
+    return True

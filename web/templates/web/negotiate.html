@@ -5,6 +5,7 @@
   <h1>Negotiate with a provider’s agent</h1>
   <p class="state">Choose a provider, set the most you will pay and the price you would be happy with. A buyer agent negotiates for you within those limits, using the same protocol any outside agent would. Then you approve the PayPal hold yourself.</p>
   {% if providers %}
+  {% include "web/_provider_cards.html" %}
   <form class="say" data-neg>
     <label>Provider
       <select name="provider" data-provider>
@@ -16,6 +17,7 @@
     <label>Price you would be happy with <input name="target_price" type="number" min="1" step="1" required data-target></label>
     <button type="submit">Start negotiating</button>
   </form>
+  <div class="card" data-detail></div>
   <p class="meta" data-note role="status"></p>
   <p class="lede">The buyer agent never goes above your maximum, and the provider’s agent never goes below its own floor. Every message is recorded, hash-linked, in the ledger.</p>
   {{ providers|json_script:"providers-data" }}
@@ -30,9 +32,30 @@
 var data = JSON.parse(document.getElementById('providers-data').textContent);
 var form = document.querySelector('[data-neg]'), note = document.querySelector('[data-note]');
 var providerSel = form.querySelector('[data-provider]'), bundleSel = form.querySelector('[data-bundle]');
+var detail = document.querySelector('[data-detail]');
+function showDetail(p) {
+  detail.innerHTML = '';
+  var h = document.createElement('h3'); h.textContent = p.name; detail.appendChild(h);
+  var d = document.createElement('p'); d.className = 'lede';
+  d.textContent = p.description || 'This provider has not added a description yet.';
+  detail.appendChild(d);
+  if (p.capabilities && p.capabilities.length) {
+    var tags = document.createElement('div'); tags.className = 'agent-tags';
+    p.capabilities.forEach(function (c) {
+      var s = document.createElement('span'); s.textContent = c; tags.appendChild(s);
+    });
+    detail.appendChild(tags);
+  }
+  (p.services || []).forEach(function (s) {
+    if (!s.list_price) return;
+    var m = document.createElement('p'); m.className = 'meta';
+    m.textContent = s.name + ' · from ' + s.list_price + ' ' + s.currency; detail.appendChild(m);
+  });
+}
 function fillBundles() {
   var p = data.find(function (x) { return x.slug === providerSel.value; });
   bundleSel.innerHTML = '';
+  showDetail(p);
   p.services.filter(function (s) { return s.list_price; }).forEach(function (s) {
     var o = document.createElement('option');
     o.value = s.id; o.textContent = s.name + ' · from ' + s.list_price + ' ' + s.currency;

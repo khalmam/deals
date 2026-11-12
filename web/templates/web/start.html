@@ -3,22 +3,75 @@
 {% block content %}
 <main>
   <h1>Start a deal</h1>
-  <p class="state">You play the client. The freelancer’s agent opens with the Standard brand package at 1800.00 USD. Haggle in your own words, approve the hold in PayPal’s sandbox, confirm delivery, and watch the money move.</p>
-  <form class="say" data-start><button type="submit">Start negotiating</button></form>
+  <p class="state">You play the client. Choose who you negotiate with, or keep the sample freelancer, whose agent opens with the Standard brand package at 1800.00 USD. Haggle in your own words, approve the hold in PayPal’s sandbox, confirm delivery, and watch the money move.</p>
+  {% include "web/_provider_cards.html" with sample=True %}
+  <form class="say" data-start>
+    {% if providers %}
+    <label>Negotiate with
+      <select name="provider" data-provider>
+        <option value="">Sample freelancer (demo rate card)</option>
+        {% for p in providers %}<option value="{{ p.slug }}">{{ p.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label data-bundle-wrap style="display:none">Service <select name="bundle" data-bundle></select></label>
+    {% endif %}
+    <button type="submit">Start negotiating</button>
+  </form>
+  {% if providers %}{{ providers|json_script:"providers-data" }}{% endif %}
+  <div class="card" data-detail style="display:none"></div>
+  <p class="meta">Prefer to let a buyer agent do the haggling within your limits? <a href="{% url 'negotiate' %}">Negotiate with a provider’s agent</a>.</p>
   <p class="meta" data-note role="status"></p>
   <p class="lede">The agent can never go below its floor. Whatever you type, the rules engine decides and every move goes in the sealed ledger.</p>
 </main>
 {% endblock %}
 {% block scripts %}
 <script>
+var pdata = document.getElementById('providers-data');
+var providers = pdata ? JSON.parse(pdata.textContent) : [];
+var psel = document.querySelector('[data-provider]');
+if (psel) {
+  var bundleSel = document.querySelector('[data-bundle]');
+  var bundleWrap = document.querySelector('[data-bundle-wrap]');
+  var detail = document.querySelector('[data-detail]');
+  var showProvider = function () {
+    var p = providers.find(function (x) { return x.slug === psel.value; });
+    detail.innerHTML = ''; bundleSel.innerHTML = '';
+    if (!p) { bundleWrap.style.display = 'none'; detail.style.display = 'none'; return; }
+    var h = document.createElement('h3'); h.textContent = p.name; detail.appendChild(h);
+    var d = document.createElement('p'); d.className = 'lede';
+    d.textContent = p.description || 'This provider has not added a description yet.';
+    detail.appendChild(d);
+    if (p.capabilities && p.capabilities.length) {
+      var tags = document.createElement('div'); tags.className = 'agent-tags';
+      p.capabilities.forEach(function (c) {
+        var s = document.createElement('span'); s.textContent = c; tags.appendChild(s);
+      });
+      detail.appendChild(tags);
+    }
+    (p.services || []).forEach(function (s) {
+      if (!s.list_price) return;
+      var o = document.createElement('option');
+      o.value = s.id; o.textContent = s.name + ' · from ' + s.list_price + ' ' + s.currency;
+      bundleSel.appendChild(o);
+      var m = document.createElement('p'); m.className = 'meta';
+      m.textContent = s.name + ' · from ' + s.list_price + ' ' + s.currency; detail.appendChild(m);
+    });
+    bundleWrap.style.display = ''; detail.style.display = '';
+  };
+  psel.addEventListener('change', showProvider); showProvider();
+}
 document.querySelector('[data-start]').addEventListener('submit', function (e) {
   e.preventDefault();
   var b = this.querySelector('button'), note = document.querySelector('[data-note]');
+  var sel = this.querySelector('[data-provider]'), bsel = this.querySelector('[data-bundle]');
+  var picked = sel && sel.value;
   b.disabled = true; note.textContent = 'Opening the deal…';
-  fetch('/api/deals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+  fetch(picked ? '/api/ui/start' : '/api/deals', { method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(picked ? { provider: sel.value, bundle: bsel.value } : {}) })
     .then(function (r) { return r.json(); })
     .then(function (d) {
-      if (d.url) { location.href = d.url; return; }
+      var go = d.deal_url || d.url; if (go) { location.href = go; return; }
       note.textContent = d.error || 'Could not start a deal.'; b.disabled = false;
     })
     .catch(function () { note.textContent = 'Could not reach the server.'; b.disabled = false; });

@@ -13,7 +13,10 @@ def start(client, **over):
 
 def test_the_page_offers_only_hosted_providers(client, parties):
     page = client.get("/negotiate/").content.decode()
-    assert "Northstar" in page and "Freelance Ext" not in page
+    assert "Northstar" in page
+    outside = parties["outside"].slug
+    assert f'value="{outside}" disabled' in page  # listed, but it cannot be picked
+    assert f'<option value="{outside}"' not in page  # and is not among the form choices
     assert "Negotiate</a>" in client.get("/").content.decode()
 
 
@@ -24,7 +27,10 @@ def test_a_visitor_negotiates_in_the_browser_and_lands_on_the_deal(client, parti
     deal = Deal.objects.get(pk=body["negotiation_id"])
     assert deal.state == "AGREED" and deal.provider == parties["hosted"]
     page = client.get(body["deal_url"]).content.decode()
-    assert "northstar" in page.lower() and "1037" not in page
+    import re
+
+    assert "northstar" in page.lower()
+    assert not re.search(r"\b1037\b", page)  # the floor as a number, not inside an id or hash
     rows = client.get(f"/api/deals/{deal.pk}").json()["transcript"]
     assert rows[0]["message"] == "Propose" and rows[-1]["message"] == "Accept"
 

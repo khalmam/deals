@@ -12,6 +12,7 @@ from django.views.decorators.http import require_GET, require_POST
 from deals.management.live_factory import live_deps as get_deps
 from deals.services.agent_deals import AgentDealError, for_deal
 from deals.services.deal_view import DealNotFound, build_deal_view
+from deals.services.ui_deal import hosted_providers, priced_providers
 from deals.services.live_deal import (
     LiveError,
     advance,
@@ -55,7 +56,9 @@ def _urls(request, deal_id):
 
 
 def start_page(request):
-    return render(request, "web/start.html", {"active": "start"})
+    return render(request, "web/start.html",
+                  {"active": "start", "providers": hosted_providers(),
+                   "cards": priced_providers()})
 
 
 @csrf_exempt

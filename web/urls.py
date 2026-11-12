@@ -22,6 +22,7 @@ urlpatterns = [
     path("start/", live_views.start_page, name="start"),
     path("negotiate/", ui_negotiate.negotiate_page, name="negotiate"),
     path("api/ui/negotiate", ui_negotiate.api_ui_negotiate, name="api_ui_negotiate"),
+    path("api/ui/start", ui_negotiate.api_ui_start, name="api_ui_start"),
     path("api/deals", live_views.api_create),
     path("api/deals/<uuid:deal_id>", live_views.api_get),
     path("api/deals/<uuid:deal_id>/offers", live_views.api_say),

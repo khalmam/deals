@@ -1,0 +1,66 @@
+{% if cards or sample %}
+<style>
+form[data-neg], form[data-start] { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; align-items: end; max-width: 100%; }
+form[data-neg] label, form[data-start] label { display: flex; flex-direction: column; gap: .35rem; }
+form[data-neg] button, form[data-start] button { justify-self: start; }
+[data-detail] { display: none !important; }
+.pick-set { border: 0; padding: 0; margin: 1.5rem 0; min-width: 0; }
+.pick-set legend { font-weight: 600; margin-bottom: .75rem; padding: 0; }
+.pick { position: relative; cursor: pointer; border: 1px solid #d2d2d7; }
+.pick input { position: absolute; opacity: 0; pointer-events: none; }
+.pick.is-picked { border-color: #1d1d1f; box-shadow: 0 0 0 2px #1d1d1f; }
+.pick-off { opacity: .55; cursor: not-allowed; }
+.pick-note { font-size: .85rem; }
+</style>
+<fieldset class="pick-set" data-cards>
+  <legend>Choose who you negotiate with</legend>
+  <div class="agent-grid">
+  {% if sample %}
+    <label class="card agent-card pick">
+      <input type="radio" name="provider-card" value="">
+      <div class="agent-card-top"><span class="agent-mark">S</span><span class="agent-status"><i></i> Demo</span></div>
+      <p class="meta">Built-in demo</p>
+      <h3>Sample freelancer</h3>
+      <p class="agent-description">A brand-design freelancer with a built-in rate card. The quickest way to try the whole flow.</p>
+    </label>
+  {% endif %}
+  {% for p in cards %}
+    <label class="card agent-card pick{% if not p.hosted %} pick-off{% endif %}">
+      <input type="radio" name="provider-card" value="{{ p.slug }}"{% if not p.hosted %} disabled{% endif %}>
+      <div class="agent-card-top"><span class="agent-mark">{{ p.name|slice:":1"|upper }}</span>{% if p.hosted %}<span class="agent-status"><i></i> Available now</span>{% endif %}</div>
+      <p class="meta">Provider agent</p>
+      <h3>{{ p.name }}</h3>
+      <p class="agent-description">{{ p.description|default:"This provider has not added a description yet." }}</p>
+      {% if p.capabilities %}<div class="agent-tags">{% for c in p.capabilities %}<span>{{ c }}</span>{% endfor %}</div>{% endif %}
+      {% for s in p.services %}{% if s.list_price %}<p class="meta">{{ s.name }} · from {{ s.list_price }} {{ s.currency }}</p>{% endif %}{% endfor %}
+      {% if not p.hosted %}<p class="meta pick-note">Runs its own agent. Negotiate with it through the API.</p>{% endif %}
+    </label>
+  {% endfor %}
+  </div>
+</fieldset>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var grid = document.querySelector('[data-cards]'); if (!grid) return;
+  var psel = document.querySelector('[data-provider]');
+  var radios = grid.querySelectorAll('input[type=radio]');
+  function mark() {
+    grid.querySelectorAll('.pick').forEach(function (c) {
+      c.classList.toggle('is-picked', c.querySelector('input').checked);
+    });
+  }
+  var current = psel ? psel.value : '';
+  radios.forEach(function (r) {
+    r.checked = (r.value === current) && !r.disabled;
+    r.addEventListener('change', function () {
+      if (psel) { psel.value = r.value; psel.dispatchEvent(new Event('change')); }
+      mark();
+    });
+  });
+  if (psel && psel.closest('label')) { psel.closest('label').style.display = 'none'; }
+  if (!grid.querySelector('input:checked')) {
+    var first = grid.querySelector('input:not(:disabled)'); if (first) { first.checked = true; }
+  }
+  mark();
+});
+</script>
+{% endif %}

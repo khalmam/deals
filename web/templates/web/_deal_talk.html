@@ -1,0 +1,18 @@
+<section aria-labelledby="h-talk">
+  <h2 id="h-talk">Negotiation</h2>
+  {% if deal.transcript %}
+  <ol class="talk">
+  {% for m in deal.transcript %}
+    <li class="{% if m.who == 'Client' %}client{% else %}freelancer{% endif %}{% if m.chat %} chat{% endif %}">
+      <p class="who">{{ m.who }}{% if m.walked_away %} walked away{% endif %}</p>
+      {% if m.price %}<p class="price num">{{ m.price }} <small>{{ m.currency }}</small></p>{% endif %}
+      {% if m.message %}<p class="said">{{ m.message }}</p>{% endif %}
+      {% if m.source %}<p class="meta">Price set by {{ m.source }}</p>{% endif %}
+      {% if m.notes %}<p class="meta">Notes: {{ m.notes|join:", " }}</p>{% endif %}
+    </li>
+  {% endfor %}
+  </ol>
+  {% else %}<p class="lede">No negotiation recorded yet.</p>{% endif %}
+</section>
+
+{% if deal.stage == 'negotiating' %}<div style="margin-top:1.5rem">{% include "web/_deal_move.html" %}</div>{% endif %}

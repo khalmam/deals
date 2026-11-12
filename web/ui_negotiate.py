@@ -7,8 +7,10 @@ from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from deals.services.agent_deals import AgentDealError
 from deals.services.agent_registry import discover_agents
 from deals.services.negotiation_views import refresh_view
+from deals.services.ui_deal import priced_providers, start_for_visitor
 from deals.services.ui_negotiation import run_for_visitor
 
 from .negotiation_api import after_for
@@ -18,7 +20,9 @@ from .ratelimit import limited
 def negotiate_page(request):
     providers = [a for a in discover_agents(agent_type="PROVIDER")
                  if a["hosted"] and any(s.get("list_price") for s in a["services"])]
-    return render(request, "web/negotiate.html", {"active": "negotiate", "providers": providers})
+    return render(request, "web/negotiate.html",
+                  {"active": "negotiate", "providers": providers,
+                   "cards": priced_providers()})
 
 
 @csrf_exempt
@@ -35,3 +39,19 @@ def api_ui_negotiate(request):
     view = refresh_view({"negotiation_id": nid, "created": "", "replayed": False})
     return JsonResponse({"negotiation_id": nid, "status": view["status"],
                          "deal_url": reverse("deal", args=[nid])})
+
+
+@csrf_exempt
+@require_POST
+@limited
+def api_ui_start(request):
+    """Start the chat haggle against a hosted provider chosen on the start page."""
+    try:
+        body = json.loads(request.body or b"{}")
+        deal_id = start_for_visitor(str(body.get("provider", "")), str(body.get("bundle", "")))
+    except AgentDealError as exc:
+        return JsonResponse({"error": str(exc)}, status=exc.status)
+    except (ValueError, AttributeError) as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+    return JsonResponse({"deal_id": deal_id, "deal_url": reverse("deal", args=[deal_id])},
+                        status=201)

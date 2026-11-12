@@ -65,7 +65,8 @@ def test_seeding_is_idempotent_and_needs_the_sub_email(db):
 def test_the_seed_command_reports_what_it_did(db, capsys):
     call_command("seed_demo")
     call_command("seed_demo")
-    assert capsys.readouterr().out.split("\n")[:2] == ["demo provider: created",
+    lines = capsys.readouterr().out.split("\n")  # the extra providers print their own lines
+    assert [ln for ln in lines if ln.startswith("demo provider:")] == ["demo provider: created",
                                                        "demo provider: exists"]
 
 

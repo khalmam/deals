@@ -22,7 +22,7 @@ from .mandate import set_mandate
 from .negotiate_round import NegotiationClosed, current_ask, play_round, start_negotiation
 from .open_deal import open_deal
 from .refresh_payouts import refresh_payouts
-from .send_payouts import PayoutsAlreadySent
+from .send_payouts import PayoutsAlreadySent, settle_without_payouts
 
 HINT = "Name a price you would pay, accept the current ask, or say you are walking away."
 ERRORS = (IllegalTransition, MandateViolation, TermsMismatch, PayoutsAlreadySent,
@@ -101,6 +101,7 @@ def advance(deps, deal_id, urls=URLS, now=None):
     """Let the agent take whatever step is allowed next (the hold, or the capture)."""
     deal = _deal(deal_id)
     agent_run(deal, deps.payments, deps.actor, urls=urls, now=now)
+    settle_without_payouts(deal, now)  # a captured deal with no sub-contractor is finished
     return {"state": deal.state}
 
 
@@ -122,6 +123,7 @@ def deliver(deps, deal_id, now=None):
     deal = _deal(deal_id)
     confirm_delivery(deal, "client", now)
     agent_run(deal, deps.payments, deps.actor, now=now)  # captures, then pays the sub-contractor
+    settle_without_payouts(deal, now)  # no sub-contractor owed: nothing left to wait for
     refresh_payouts(deal, deps.payments, now)
     return {"state": deal.state}
 
@@ -139,7 +141,9 @@ def cancel(deps, deal_id, now=None):
 @_guarded
 def refresh(deps, deal_id, now=None):
     deal = _deal(deal_id)
-    return {"changed": refresh_payouts(deal, deps.payments, now), "state": deal.state}
+    changed = refresh_payouts(deal, deps.payments, now)
+    settle_without_payouts(deal, now)  # also unsticks a deal captured before this fix
+    return {"changed": changed, "state": deal.state}
 
 
 @_guarded

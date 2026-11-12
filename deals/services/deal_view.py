@@ -3,13 +3,13 @@ touches a model. Everything here comes from the deal row and its ledger."""
 from deals.domain.payout import summarise
 from deals.domain.stage import stage_for
 from deals.models import Deal, Negotiation
-from deals.domain.payout import summarise
-from deals.domain.stage import stage_for
-from deals.models import Deal, Negotiation
 
 from .chat_log import merge_chat
+from .deal_panels import activity_panel, parties_panel, paypal_panel, proposal_panel
+from .offer_terms import offer_terms
 from .deal_stage import ask_label, next_actions, standing_proposal
 from .ledger import verify_ledger
+from .ledger_rows import KINDS, _ledger, _summary, _when  # noqa: F401
 
 TIMELINE = (
     ("DEAL_OPENED", "Deal opened"),
@@ -29,10 +29,6 @@ class DealNotFound(Exception):
     pass
 
 
-def _when(ts):
-    return ts[:19].replace("T", " ") + " UTC" if ts else ""
-
-
 def _timeline(entries):
     first, last_ok = {}, None
     for e in entries:
@@ -46,7 +42,10 @@ def _timeline(entries):
     for kind, label in TIMELINE:
         e = first.get(kind)
         if kind == "PAYOUT_ITEM_SUCCEEDED":
-            e = last_ok if expected and confirmed >= expected else None
+            if sent and expected == 0:  # nothing was owed to a sub-contractor
+                e = sent
+            else:
+                e = last_ok if expected and confirmed >= expected else None
         steps.append({"label": label, "done": e is not None, "current": False,
                       "time": _when(e.ts) if e else ""})
     for kind, label in END_STEPS.items():
@@ -95,6 +94,7 @@ def _terms(deal):
     return {"bundle": t.get("bundle_name", ""), "list_price": t.get("list_price", ""),
             "freelancer_net": t.get("freelancer_net", ""), "net_days": t.get("net_days", ""),
             "late_fee_pct": t.get("late_fee_pct", ""), "line_items": t.get("line_items", []),
+            "delivery_days": t.get("delivery_days", ""), "delivery_due": t.get("delivery_due", ""),
             "payouts": t.get("payouts", []), "hash": deal.terms_hash}
 
 
@@ -112,45 +112,6 @@ def _actions(entries):
     return rows
 
 
-KINDS = {
-    "DEAL_OPENED": ("Deal opened", "#8e8e93"), "MANDATE_SET": ("Mandate set", "#8e8e93"),
-    "OFFER_MADE": ("Offer made", "#0a84ff"), "COUNTER_MADE": ("Counter-offer", "#0a84ff"),
-    "TERMS_AGREED": ("Terms agreed", "#8e5cf7"), "HOLD_REQUESTED": ("Hold requested", "#ff9f0a"),
-    "HOLD_AUTHORIZED": ("Hold approved", "#ff9f0a"),
-    "DELIVERY_CONFIRMED": ("Delivery confirmed", "#30a46c"),
-    "CAPTURE_COMPLETED": ("Payment captured", "#30a46c"),
-    "PAYOUT_SENT": ("Payouts sent", "#30a46c"),
-    "PAYOUT_ITEM_SUCCEEDED": ("Payout confirmed", "#30a46c"),
-    "WEBHOOK_APPLIED": ("PayPal update", "#8e8e93"), "AGENT_ACTION": ("Agent action", "#d6409f"),
-    "HOLD_VOIDED": ("Hold voided", "#d9453d"), "DEAL_WALKED_AWAY": ("Walked away", "#d9453d"),
-}
-
-
-def _summary(kind, p):
-    money = f"{p.get('price') or p.get('total') or p.get('amount') or ''} {p.get('currency', '')}"
-    if kind in ("OFFER_MADE", "COUNTER_MADE") and p.get("price"):
-        return ("Freelancer: " if p.get("by") == "freelancer" else "Client: ") + money.strip()
-    if kind in ("TERMS_AGREED", "CAPTURE_COMPLETED"):
-        return money.strip()
-    if kind == "AGENT_ACTION":
-        tool = str(p.get("tool", "")).replace("_", " ")
-        return f"{tool} · {'done' if p.get('ok') else 'refused'} · {p.get('source', '')}"
-    return ""
-
-
-def _ledger(entries, verified):
-    broken = None if not verified or verified["intact"] else verified["broken_seq"]
-    rows = []
-    for pos, e in enumerate(entries, 1):
-        label, color = KINDS.get(e.kind, (e.kind.replace("_", " ").capitalize(), "#8e8e93"))
-        state = "ok" if not broken or pos < broken else ("bad" if pos == broken else "unverified")
-        rows.append({"seq": e.seq, "kind": e.kind, "label": label, "color": color,
-                     "summary": _summary(e.kind, e.payload), "state": state, "first": pos == 1,
-                     "date": e.ts[:10], "time": _when(e.ts), "hash": e.hash,
-                     "short_hash": e.hash[:8], "prev_short": e.prev_hash[:8]})
-    return rows
-
-
 def build_deal_view(deal_id, verify=False):
     """Return the whole deal page as plain data. verify=True also re-checks the hash chain."""
     deal = Deal.objects.filter(pk=deal_id).first()
@@ -165,9 +126,7 @@ def build_deal_view(deal_id, verify=False):
     neg = Negotiation.objects.filter(pk=deal.pk).values_list("status", flat=True).first()
     payouts = summarise(deal.payments.filter(kind="PAYOUT_ITEM").values_list("status", flat=True))
     stage = stage_for(deal.state, neg, payouts["needs_attention"])
-    neg = Negotiation.objects.filter(pk=deal.pk).values_list("status", flat=True).first()
-    payouts = summarise(deal.payments.filter(kind="PAYOUT_ITEM").values_list("status", flat=True))
-    stage = stage_for(deal.state, neg, payouts["needs_attention"])
+    ledger = _ledger(entries, verified)
     return {
         "stage": stage.name, "waiting_on": stage.waiting_on, "next": next_actions(deal, stage),
         "payouts": payouts, "standing": standing_proposal(entries),
@@ -180,7 +139,12 @@ def build_deal_view(deal_id, verify=False):
         "currency": deal.currency, "terms": _terms(deal),
         "timeline": _timeline(entries), "transcript": _talk(deal, entries),
         "actions": _actions(entries),
-        "ledger": _ledger(entries, verified),
+        "ledger": ledger,
+        "parties": parties_panel(deal, stage.waiting_on),
+        "proposal": proposal_panel(deal, entries),
+        "paypal": paypal_panel(deal, entries, payouts),
+        "activity": activity_panel(ledger, deal),
+        "offer": offer_terms(deal, entries),
         "head_hash": entries[-1].hash if entries else "", "verified": verified,
     }
 

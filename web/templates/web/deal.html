@@ -16,7 +16,60 @@
 <p class="proof">The model decided <strong>{{ deal.proof.model }} of {{ deal.proof.actions }}</strong> agent actions. All <strong>{{ deal.proof.entries }}</strong> ledger entries are hash-chained, and the agreed terms are anchored in PayPal’s own record.</p>
 {% endif %}
 
+{% if deal.stage == 'negotiating' %}{% include "web/_deal_talk.html" %}{% endif %}
 {% if deal.stage != 'negotiating' %}<div style="margin-top:2rem">{% include "web/_deal_move.html" %}</div>{% endif %}
+
+<section aria-labelledby="h-glance">
+  <h2 id="h-glance">At a glance</h2>
+  <div class="card">
+    <dl class="terms">
+      <div><dt>Client</dt><dd>{{ deal.parties.client }}</dd></div>
+      <div><dt>Provider</dt><dd>{{ deal.parties.provider }}</dd></div>
+      <div><dt>Next action by</dt><dd>{{ deal.parties.next }}</dd></div>
+    </dl>
+    {% if deal.proposal %}
+    <dl class="terms">
+      <div><dt>{{ deal.proposal.kind }} from {{ deal.proposal.by }}</dt><dd class="num">{{ deal.proposal.price }}</dd></div>
+      {% for r in deal.proposal.rows %}{% if r.value %}<div><dt>{{ r.label }}</dt><dd>{{ r.value }}</dd></div>{% endif %}{% endfor %}
+      <div><dt>Negotiation</dt><dd>{{ deal.proposal.status }}{% if deal.proposal.version != "" %} · version {{ deal.proposal.version }}{% endif %}</dd></div>
+      <div><dt>Buyer side</dt><dd>{% if deal.proposal.buyer_agreed %}Agreed{% else %}Not yet{% endif %}</dd></div>
+      <div><dt>Provider side</dt><dd>{% if deal.proposal.provider_agreed %}Agreed{% else %}Not yet{% endif %}</dd></div>
+    </dl>
+    {% endif %}
+    {% if deal.offer %}
+    <dl class="terms">
+      <div><dt>Terms with this price</dt><dd>Net {{ deal.offer.net_days }} days, {{ deal.offer.late_fee_pct }}% late fee</dd></div>
+      <div><dt>Deliverables</dt><dd>{% for i in deal.offer.deliverables %}{{ i.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</dd></div>
+    </dl>
+    {% endif %}
+  </div>
+</section>
+
+{% if deal.stage != 'negotiating' %}
+<section aria-labelledby="h-paypal">
+  <h2 id="h-paypal">PayPal payment</h2>
+  <div class="card">
+    <p><strong>{{ deal.paypal.headline }}</strong></p>
+    <p class="lede">{{ deal.paypal.explain }}</p>
+    <ol class="steps">
+    {% for s in deal.paypal.steps %}
+      <li{% if s.done %} class="done"{% endif %}{% if s.current %} aria-current="step"{% endif %}>
+        <span class="step-name">{{ s.label }}</span>
+        <span class="step-time">{% if s.done %}{{ s.time }}{% else %}Pending{% endif %}</span>
+        {% if s.detail %}<span class="step-time">{{ s.detail }}</span>{% endif %}
+      </li>
+    {% endfor %}
+    </ol>
+    {% if deal.paypal.ids %}
+    <dl class="terms" style="margin-top:1.5rem">
+      {% for i in deal.paypal.ids %}<div><dt>{{ i.label }}</dt><dd><code>{{ i.value }}</code></dd></div>{% endfor %}
+    </dl>
+    {% endif %}
+    <p class="meta">{{ deal.paypal.note }}</p>
+  </div>
+</section>
+{% endif %}
+
 
 <section aria-labelledby="h-status">
   <h2 id="h-status">Status</h2>
@@ -30,24 +83,7 @@
   </ol>
 </section>
 
-<section aria-labelledby="h-talk">
-  <h2 id="h-talk">Negotiation</h2>
-  {% if deal.transcript %}
-  <ol class="talk">
-  {% for m in deal.transcript %}
-    <li class="{% if m.who == 'Client' %}client{% else %}freelancer{% endif %}{% if m.chat %} chat{% endif %}">
-      <p class="who">{{ m.who }}{% if m.walked_away %} walked away{% endif %}</p>
-      {% if m.price %}<p class="price num">{{ m.price }} <small>{{ m.currency }}</small></p>{% endif %}
-      {% if m.message %}<p class="said">{{ m.message }}</p>{% endif %}
-      {% if m.source %}<p class="meta">Price set by {{ m.source }}</p>{% endif %}
-      {% if m.notes %}<p class="meta">Notes: {{ m.notes|join:", " }}</p>{% endif %}
-    </li>
-  {% endfor %}
-  </ol>
-  {% else %}<p class="lede">No negotiation recorded yet.</p>{% endif %}
-</section>
-
-{% if deal.stage == 'negotiating' %}<div style="margin-top:1.5rem">{% include "web/_deal_move.html" %}</div>{% endif %}
+{% if deal.stage != 'negotiating' %}{% include "web/_deal_talk.html" %}{% endif %}
 
 <section aria-labelledby="h-terms">
   <h2 id="h-terms">Terms</h2>
@@ -59,10 +95,11 @@
     <div><dt>List price</dt><dd class="num">{{ deal.terms.list_price }} {{ deal.currency }}</dd></div>
     <div><dt>Freelancer net</dt><dd class="num">{{ deal.terms.freelancer_net }} {{ deal.currency }}</dd></div>
     <div><dt>Payment terms</dt><dd>Net {{ deal.terms.net_days }} days, {{ deal.terms.late_fee_pct }}% late fee</dd></div>
+    {% if deal.terms.delivery_days %}<div><dt>Delivery</dt><dd>{{ deal.terms.delivery_days }} days{% if deal.terms.delivery_due %} (by {{ deal.terms.delivery_due }}){% endif %}</dd></div>{% endif %}
     <div><dt>Terms hash</dt><dd><code>{{ deal.terms.hash }}</code></dd></div>
   </dl>
   <div class="scroll"><table>
-    <caption>Line items</caption>
+    <caption>Scope and deliverables</caption>
     <thead><tr><th scope="col">Item</th><th scope="col">Amount</th></tr></thead>
     <tbody>{% for i in deal.terms.line_items %}<tr><td>{{ i.name }}</td><td class="num">{{ i.amount }} {{ deal.currency }}</td></tr>{% endfor %}</tbody>
   </table></div>
@@ -75,6 +112,22 @@
   {% endif %}
   </div>
   {% else %}<p class="lede">No terms agreed yet.</p>{% endif %}
+</section>
+
+<section aria-labelledby="h-activity">
+  <h2 id="h-activity">Activity</h2>
+  <p class="lede">Offers, chat, PayPal steps and agent actions in the order they happened. Chat is kept apart from the sealed ledger; this view only lays them side by side.</p>
+  {% if deal.activity %}
+  <ol class="thread">
+  {% for r in deal.activity %}
+    <li class="row" style="--dot:{{ r.color }}">
+      <span class="line"></span><span class="node"></span>
+      <div class="top"><span class="kind">{{ r.label }}</span><span class="by">{{ r.source }} · {{ r.time }}</span></div>
+      {% if r.summary %}<div class="sum">{{ r.summary }}</div>{% endif %}
+    </li>
+  {% endfor %}
+  </ol>
+  {% else %}<p class="lede">Nothing has happened yet.</p>{% endif %}
 </section>
 
 <section aria-labelledby="h-agent">
