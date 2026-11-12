@@ -1,7 +1,11 @@
 """Webhook verification (PayPal's own verify endpoint) and event parsing."""
+import logging
+
 from deals.domain.ports import WebhookEvent
 
 from .client import PayPalClient
+
+log = logging.getLogger(__name__)
 
 
 def verify_signature(client: PayPalClient, headers, event, webhook_id):
@@ -16,7 +20,15 @@ def verify_signature(client: PayPalClient, headers, event, webhook_id):
         "webhook_event": event,
     }
     d = client.request("POST", "/v1/notification/webhooks/verify-webhook-signature", body)
-    return d.get("verification_status") == "SUCCESS"
+    status = d.get("verification_status")
+    if status != "SUCCESS":
+        # Say why a delivery was refused: what PayPal answered and which headers were missing.
+        needed = ("paypal-auth-algo", "paypal-cert-url", "paypal-transmission-id",
+                  "paypal-transmission-sig", "paypal-transmission-time")
+        missing = [k for k in needed if not h.get(k)]
+        log.warning("webhook verify: PayPal answered %s for %s (missing headers: %s, webhook id ends %s)",
+                    status, h.get("paypal-transmission-id"), missing or "none", str(webhook_id)[-4:])
+    return status == "SUCCESS"
 
 
 def parse_event(event):
@@ -38,7 +50,8 @@ class WebhookGateway:
         from .client import PayPalError
         try:
             return verify_signature(self._client, headers, raw_event, self._webhook_id)
-        except PayPalError:  # PayPal could not verify it: junk or foreign request
+        except PayPalError as exc:  # PayPal could not verify it: junk or foreign request
+            log.warning("webhook verify: PayPal rejected the verification call: %s", exc)
             return False
 
     def parse(self, raw_event):
